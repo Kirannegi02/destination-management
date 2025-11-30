@@ -33,9 +33,27 @@ Route::prefix('auth')->group(function () {
     Route::post('/verify-otp', [OtpController::class, 'verifyOtp']);
 });
 
+// Public image serving route (no authentication required)
+Route::get('/images/{path}', [\App\Http\Controllers\Api\ImageController::class, 'serve'])
+    ->where('path', '.*')
+    ->name('api.images.serve');
+
 // Protected API routes (require JWT authentication)
 Route::middleware('auth:api')->group(function () {
-    // User profile
+    // User profile routes
+    Route::prefix('profile')->group(function () {
+        // Get profile
+        Route::get('/', [\App\Http\Controllers\Api\ProfileController::class, 'getProfile']);
+        
+        // Create profile (for new users)
+        Route::post('/', [\App\Http\Controllers\Api\ProfileController::class, 'createProfile']);
+        
+        // Update profile
+        Route::put('/', [\App\Http\Controllers\Api\ProfileController::class, 'updateProfile']);
+        Route::patch('/', [\App\Http\Controllers\Api\ProfileController::class, 'updateProfile']);
+    });
+    
+    // User info (simple endpoint)
     Route::get('/user', function () {
         try {
             /** @var \App\Models\User|null $user */
@@ -57,6 +75,7 @@ Route::middleware('auth:api')->group(function () {
                     'phone' => $user->phone,
                     'country_code' => $user->country_code,
                     'country' => $user->country,
+                    'profile_completed' => !is_null($user->profile_completed_at),
                 ]
             ], 200); // OK
         } catch (\Exception $e) {

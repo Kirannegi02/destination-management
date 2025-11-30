@@ -31,6 +31,17 @@ class User extends Authenticatable implements JWTSubject
         'otp',
         'otp_expires_at',
         'otp_type',
+        // Agent profile fields
+        'image',
+        'agency_name',
+        'gst_number',
+        'address',
+        'state',
+        'city',
+        'pincode',
+        'alternate_phone',
+        'status',
+        'profile_completed_at',
     ];
 
     /**
@@ -52,6 +63,7 @@ class User extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'otp_expires_at' => 'datetime',
+            'profile_completed_at' => 'datetime',
         ];
     }
 

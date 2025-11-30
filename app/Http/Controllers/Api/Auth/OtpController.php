@@ -190,6 +190,9 @@ class OtpController extends Controller
             ], 401); // Unauthorized
         }
 
+        // Check if user is new (profile not completed)
+        $isNewUser = !$user->profile_completed_at;
+        
         // Generate JWT token
         try {
             $token = JWTAuth::fromUser($user);
@@ -207,6 +210,7 @@ class OtpController extends Controller
                     'token' => $token,
                     'token_type' => 'bearer',
                     'expires_in' => config('jwt.ttl') * 60, // seconds
+                    'is_new_user' => $isNewUser, // Flag to indicate if profile needs to be created
                 ]
             ], 200); // OK
         } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {

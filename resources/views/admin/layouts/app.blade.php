@@ -70,6 +70,44 @@
             border-left-color: #60a5fa;
         }
 
+        .menu-item.has-submenu {
+            position: relative;
+        }
+
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .submenu.expanded {
+            max-height: 200px;
+        }
+
+        .submenu-item {
+            display: block;
+            padding: 10px 20px 10px 50px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+            font-size: 14px;
+        }
+
+        .submenu-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: #60a5fa;
+        }
+
+        .submenu-item.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-left-color: #60a5fa;
+            font-weight: 600;
+        }
+
         /* Main Content */
         .main-content {
             flex: 1;
@@ -372,9 +410,28 @@
                 <a href="#" class="menu-item">
                     🎯 Destinations
                 </a>
-                <a href="#" class="menu-item">
-                    👥 Users
-                </a>
+                @php
+                    $isUsersActive = request()->routeIs('admin.users.*');
+                    $currentStatus = request('status', 'pending'); // Default to pending
+                    $isPending = $currentStatus == 'pending' || !request()->has('status');
+                    $isApproved = $currentStatus == 'approved';
+                @endphp
+                <div class="menu-item has-submenu {{ $isUsersActive ? 'active' : '' }}" 
+                     onclick="toggleSubmenu(this)" 
+                     style="cursor: pointer;">
+                    👥 Users (Agents)
+                    <span class="submenu-arrow" style="float: right; margin-top: 2px;">{{ $isUsersActive ? '▼' : '▶' }}</span>
+                </div>
+                <div class="submenu {{ $isUsersActive ? 'expanded' : '' }}">
+                    <a href="{{ route('admin.users.index', ['status' => 'pending']) }}" 
+                       class="submenu-item {{ $isPending ? 'active' : '' }}">
+                        ⏳ Pending
+                    </a>
+                    <a href="{{ route('admin.users.index', ['status' => 'approved']) }}" 
+                       class="submenu-item {{ $isApproved ? 'active' : '' }}">
+                        ✅ Approved
+                    </a>
+                </div>
                 <a href="{{ route('admin.settings.index') }}" class="menu-item {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
                     ⚙️ Settings
                 </a>
@@ -423,6 +480,35 @@
     </div>
 
     @stack('scripts')
+    <script>
+        function toggleSubmenu(element) {
+            const submenu = element.nextElementSibling;
+            const arrow = element.querySelector('.submenu-arrow');
+            
+            if (submenu && submenu.classList.contains('submenu')) {
+                submenu.classList.toggle('expanded');
+                if (arrow) {
+                    arrow.textContent = submenu.classList.contains('expanded') ? '▼' : '▶';
+                }
+            }
+        }
+
+        // Auto-expand submenu if any sub-item is active
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeSubItem = document.querySelector('.submenu-item.active');
+            if (activeSubItem) {
+                const submenu = activeSubItem.closest('.submenu');
+                const parentItem = submenu.previousElementSibling;
+                if (submenu && parentItem) {
+                    submenu.classList.add('expanded');
+                    const arrow = parentItem.querySelector('.submenu-arrow');
+                    if (arrow) {
+                        arrow.textContent = '▼';
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
 
