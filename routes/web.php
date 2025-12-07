@@ -107,7 +107,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/services', [\App\Http\Controllers\Admin\ServiceController::class, 'index'])->name('services.index');
         
         // User (Agents) routes
-        Route::resource('users', \App\Http\Controllers\Admin\UserController::class)->except(['create', 'store', 'show']);
+        Route::resource('users', \App\Http\Controllers\Admin\UserController::class)->except(['show']);
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
         
         // Settings routes

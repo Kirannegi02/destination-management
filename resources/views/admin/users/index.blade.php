@@ -15,6 +15,11 @@
                 @endif
             </h2>
             <div style="display: flex; gap: 12px; align-items: center;">
+                <!-- Add Agent Button -->
+                <a href="{{ route('admin.users.create', ['status' => $status]) }}" 
+                   style="padding: 8px 16px; background: #48bb78; color: white; border: none; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                    <span>+</span> Add Agent
+                </a>
                 <!-- Search Form -->
                 <form action="{{ route('admin.users.index') }}" method="GET" style="display: flex; gap: 8px;">
                     <input type="hidden" name="status" value="{{ $status }}">
@@ -36,12 +41,6 @@
                 </form>
             </div>
         </div>
-
-        @if(session('success'))
-            <div style="background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #c3e6cb;">
-                {{ session('success') }}
-            </div>
-        @endif
 
         @if($users->count() > 0)
             <table class="table">

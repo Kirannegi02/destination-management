@@ -59,6 +59,85 @@ class UserController extends Controller
     }
 
     /**
+     * Show the form for creating a new user.
+     */
+    public function create()
+    {
+        return view('admin.users.create');
+    }
+
+    /**
+     * Store a newly created user in storage.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'phone' => 'required|string|max:20|unique:users,phone',
+            'alternate_phone' => 'nullable|string|max:20',
+            'agency_name' => 'required|string|max:255',
+            'gst_number' => 'required|string|max:15|unique:users,gst_number',
+            'address' => 'required|string',
+            'country' => 'required|string|max:100',
+            'state' => 'required|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'pincode' => 'nullable|string|max:10',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'status' => 'required|in:active,inactive,pending',
+        ]);
+
+        // Validate GST number format
+        $gstNumber = strtoupper(trim($validated['gst_number']));
+        if (!$this->validateGstNumber($gstNumber)) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['gst_number' => 'Invalid GST number format. Must be 15 characters in format: 2 digits (state code) + 10 alphanumeric (PAN) + 1 digit + Z + 1 digit']);
+        }
+        $validated['gst_number'] = $gstNumber;
+
+        // Create user
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'alternate_phone' => $validated['alternate_phone'] ?? null,
+            'agency_name' => $validated['agency_name'],
+            'gst_number' => $validated['gst_number'],
+            'address' => $validated['address'],
+            'country' => $validated['country'],
+            'state' => $validated['state'],
+            'city' => $validated['city'] ?? null,
+            'pincode' => $validated['pincode'] ?? null,
+            'status' => $validated['status'],
+            'profile_completed_at' => now(), // Mark profile as completed since admin is creating it
+        ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            try {
+                $imageData = ImageService::upload(
+                    $request->file('image'),
+                    'agents',
+                    (string) $user->id,
+                    2048
+                );
+                $user->update(['image' => $imageData['path']]);
+            } catch (\Exception $e) {
+                // If image upload fails, continue without image
+                // User can update it later
+            }
+        }
+
+        // Determine which tab to redirect to based on the status
+        $redirectStatus = $validated['status'] === 'pending' ? 'pending' : 'approved';
+
+        return redirect()
+            ->route('admin.users.index', ['status' => $redirectStatus])
+            ->with('success', 'Agent created successfully.');
+    }
+
+    /**
      * Show the form for editing the specified user.
      */
     public function edit(Request $request, string $id)
