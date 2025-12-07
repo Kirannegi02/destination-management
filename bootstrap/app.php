@@ -58,7 +58,18 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthenticated',
+                    'message' => 'Unauthorized. Authentication token is required.',
+                    'error' => 'Authentication required'
+                ], 401);
+            }
+        });
+
+        // Handle route not found exceptions for API routes
+        $exceptions->render(function (Symfony\Component\Routing\Exception\RouteNotFoundException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Authentication token is required.',
                     'error' => 'Authentication required'
                 ], 401);
             }

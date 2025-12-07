@@ -379,8 +379,15 @@
                 </a>
                 
                 @php
+                    $isRestaurantsActive = request()->routeIs('admin.restaurants.*');
+                @endphp
+                <a href="{{ route('admin.restaurants.index') }}" 
+                   class="menu-item {{ $isRestaurantsActive ? 'active' : '' }}">
+                    🍽️ Restaurants
+                </a>
+                
+                @php
                     $serviceTypes = [
-                        'restaurant' => ['icon' => '🍽️', 'label' => 'Restaurants'],
                         'guide' => ['icon' => '👨‍🏫', 'label' => 'Guides'],
                         'sightseeing' => ['icon' => '🏛️', 'label' => 'Sightseeing'],
                         'transport' => ['icon' => '🚗', 'label' => 'Transport'],

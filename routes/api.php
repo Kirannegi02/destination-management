@@ -40,6 +40,17 @@ Route::get('/images/{path}', [\App\Http\Controllers\Api\ImageController::class, 
 
 // Protected API routes (require JWT authentication)
 Route::middleware('auth:api')->group(function () {
+    // Restaurant API routes (agents can only see their own restaurants)
+    Route::prefix('restaurants')->group(function () {
+        // Get filter options
+        Route::get('/filter-options', [\App\Http\Controllers\Api\RestaurantController::class, 'filterOptions']);
+        
+        // Get list of restaurants with filters
+        Route::get('/', [\App\Http\Controllers\Api\RestaurantController::class, 'index']);
+        
+        // Get single restaurant by ID
+        Route::get('/{id}', [\App\Http\Controllers\Api\RestaurantController::class, 'show']);
+    });
     // User profile routes
     Route::prefix('profile')->group(function () {
         // Get profile
