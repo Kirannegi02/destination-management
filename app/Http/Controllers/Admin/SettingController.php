@@ -36,7 +36,18 @@ class SettingController extends Controller
             'firebase_credentials_json' => Setting::get('firebase_credentials_json', ''),
         ];
 
-        return view('admin.settings.index', compact('smtpSettings', 'firebaseSettings'));
+        // Get Razorpay settings
+        $razorpayKeySecret = Setting::get('razorpay_key_secret', '');
+        $razorpayWebhookSecret = Setting::get('razorpay_webhook_secret', '');
+        $razorpaySettings = [
+            'razorpay_key_id' => Setting::get('razorpay_key_id', ''),
+            'razorpay_key_secret' => $razorpayKeySecret ? '••••••••' : '', // Show dots if secret exists
+            'razorpay_webhook_secret' => $razorpayWebhookSecret ? '••••••••' : '', // Show dots if secret exists
+            'razorpay_environment' => Setting::get('razorpay_environment', 'test'), // test or live
+            'razorpay_enabled' => Setting::get('razorpay_enabled', '0'), // 0 or 1
+        ];
+
+        return view('admin.settings.index', compact('smtpSettings', 'firebaseSettings', 'razorpaySettings'));
     }
 
     /**
@@ -117,6 +128,52 @@ class SettingController extends Controller
 
         return redirect()->route('admin.settings.index')
             ->with('success', 'Firebase settings updated successfully.');
+    }
+
+    /**
+     * Update Razorpay payment settings.
+     */
+    public function updateRazorpay(Request $request)
+    {
+        $existingKeySecret = Setting::get('razorpay_key_secret', '');
+        $existingWebhookSecret = Setting::get('razorpay_webhook_secret', '');
+        
+        $keySecretRequired = empty($existingKeySecret) ? 'required' : 'nullable';
+        $webhookSecretRequired = 'nullable';
+
+        $validator = Validator::make($request->all(), [
+            'razorpay_key_id' => 'required|string|max:255',
+            'razorpay_key_secret' => $keySecretRequired . '|string|max:255',
+            'razorpay_webhook_secret' => $webhookSecretRequired . '|string|max:255',
+            'razorpay_environment' => 'required|in:test,live',
+            'razorpay_enabled' => 'nullable|in:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('error', 'Please fix the validation errors.');
+        }
+
+        // Save Razorpay settings
+        Setting::set('razorpay_key_id', $request->razorpay_key_id);
+        
+        // Only update key secret if it's provided and not empty (and not placeholder)
+        if (!empty($request->razorpay_key_secret) && $request->razorpay_key_secret !== '••••••••') {
+            Setting::set('razorpay_key_secret', $request->razorpay_key_secret, 'encrypted');
+        }
+        
+        // Only update webhook secret if it's provided and not empty (and not placeholder)
+        if (!empty($request->razorpay_webhook_secret) && $request->razorpay_webhook_secret !== '••••••••') {
+            Setting::set('razorpay_webhook_secret', $request->razorpay_webhook_secret, 'encrypted');
+        }
+        
+        Setting::set('razorpay_environment', $request->razorpay_environment);
+        Setting::set('razorpay_enabled', $request->has('razorpay_enabled') ? $request->razorpay_enabled : '0');
+
+        return redirect()->route('admin.settings.index')
+            ->with('success', 'Razorpay payment settings updated successfully.');
     }
 
     /**

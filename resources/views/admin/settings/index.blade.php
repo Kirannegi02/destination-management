@@ -168,6 +168,9 @@
                 <button class="tab-button" onclick="switchTab('firebase')">
                     🔥 Firebase Settings
                 </button>
+                <button class="tab-button" onclick="switchTab('razorpay')">
+                    💳 Payment Configurations
+                </button>
             </div>
             <div style="margin-left: 20px;">
                 <form action="{{ route('admin.cache.clear.all') }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to clear all caches?');">
@@ -414,6 +417,121 @@
 
                     <div style="margin-top: 30px;">
                         <button type="submit" class="btn-save">Save Firebase Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Razorpay Payment Settings Tab -->
+        <div id="razorpay-tab" class="tab-content">
+            <div class="settings-form">
+                <div class="info-box">
+                    <strong>Razorpay Payment Configuration</strong>
+                    <p>Configure your Razorpay payment gateway settings to enable online payments. You can get your API keys from the Razorpay Dashboard. Make sure to use test keys for testing and live keys for production.</p>
+                </div>
+
+                <form action="{{ route('admin.settings.razorpay.update') }}" method="POST">
+                    @csrf
+                    
+                    <div class="form-section">
+                        <h3 class="form-section-title">Payment Gateway Status</h3>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                                <input type="checkbox" 
+                                       name="razorpay_enabled" 
+                                       value="1"
+                                       {{ old('razorpay_enabled', $razorpaySettings['razorpay_enabled']) == '1' ? 'checked' : '' }}
+                                       style="width: 20px; height: 20px; cursor: pointer;">
+                                <span>Enable Razorpay Payment Gateway</span>
+                            </label>
+                            <div class="form-help">Enable or disable Razorpay payment processing</div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="form-section-title">API Credentials</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>
+                                    Razorpay Key ID <span class="required">*</span>
+                                </label>
+                                <input type="text" 
+                                       name="razorpay_key_id" 
+                                       value="{{ old('razorpay_key_id', $razorpaySettings['razorpay_key_id']) }}" 
+                                       placeholder="rzp_test_..."
+                                       required>
+                                <div class="form-help">Your Razorpay Key ID (starts with rzp_test_ or rzp_live_)</div>
+                                @error('razorpay_key_id')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 5px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    Razorpay Key Secret <span class="required">*</span>
+                                </label>
+                                <input type="password" 
+                                       name="razorpay_key_secret" 
+                                       value="{{ old('razorpay_key_secret', $razorpaySettings['razorpay_key_secret'] === '••••••••' ? '' : $razorpaySettings['razorpay_key_secret']) }}" 
+                                       placeholder="{{ $razorpaySettings['razorpay_key_secret'] === '••••••••' ? 'Leave blank to keep current secret' : 'Your Razorpay Key Secret' }}"
+                                       {{ $razorpaySettings['razorpay_key_secret'] === '••••••••' ? '' : 'required' }}>
+                                <div class="form-help">
+                                    {{ $razorpaySettings['razorpay_key_secret'] === '••••••••' ? 'Leave blank to keep current secret, or enter new secret' : 'Your Razorpay Key Secret (keep this secure)' }}
+                                </div>
+                                @error('razorpay_key_secret')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 5px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    Environment <span class="required">*</span>
+                                </label>
+                                <select name="razorpay_environment" required>
+                                    <option value="test" {{ old('razorpay_environment', $razorpaySettings['razorpay_environment']) == 'test' ? 'selected' : '' }}>Test Mode</option>
+                                    <option value="live" {{ old('razorpay_environment', $razorpaySettings['razorpay_environment']) == 'live' ? 'selected' : '' }}>Live Mode</option>
+                                </select>
+                                <div class="form-help">Use Test Mode for development, Live Mode for production</div>
+                                @error('razorpay_environment')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 5px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="form-section-title">Webhook Configuration (Optional)</h3>
+                        <div class="form-group">
+                            <label>
+                                Webhook Secret
+                            </label>
+                            <input type="password" 
+                                   name="razorpay_webhook_secret" 
+                                   value="{{ old('razorpay_webhook_secret', $razorpaySettings['razorpay_webhook_secret'] === '••••••••' ? '' : $razorpaySettings['razorpay_webhook_secret']) }}" 
+                                   placeholder="{{ $razorpaySettings['razorpay_webhook_secret'] === '••••••••' ? 'Leave blank to keep current secret' : 'Your Razorpay Webhook Secret' }}">
+                            <div class="form-help">
+                                {{ $razorpaySettings['razorpay_webhook_secret'] === '••••••••' ? 'Leave blank to keep current secret, or enter new webhook secret' : 'Webhook secret for verifying Razorpay webhook requests (optional but recommended)' }}
+                            </div>
+                            @error('razorpay_webhook_secret')
+                                <div style="color: #e53e3e; font-size: 12px; margin-top: 5px;">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <strong style="display: block; margin-bottom: 8px; color: #856404;">⚠️ Important Security Notes:</strong>
+                            <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 13px; line-height: 1.8;">
+                                <li>Never share your Razorpay Key Secret or Webhook Secret publicly</li>
+                                <li>Use Test Mode during development and Live Mode only in production</li>
+                                <li>Make sure your webhook URL is configured in Razorpay Dashboard</li>
+                                <li>Test payments in Test Mode before going live</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <button type="submit" class="btn-save">Save Payment Settings</button>
                     </div>
                 </form>
             </div>
