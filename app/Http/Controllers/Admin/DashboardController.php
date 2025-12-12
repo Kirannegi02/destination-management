@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
+use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,43 +15,19 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // Helper function to safely get table count
-        $getCount = function($table) {
-            try {
-                return DB::table($table)->count();
-            } catch (\Exception $e) {
-                return 0;
-            }
-        };
-
-        // Helper function to safely get table data
-        $getData = function($table, $limit = 10) {
-            try {
-                return DB::table($table)
-                    ->orderBy('created_at', 'desc')
-                    ->limit($limit)
-                    ->get();
-            } catch (\Exception $e) {
-                return collect([]);
-            }
-        };
-
-        // Get statistics for dashboard
         $stats = [
-            'total_bookings' => $getCount('bookings'),
+            'total_restaurants' => $this->safeCount('restaurants'),
+            'active_restaurants' => $this->safeCount('restaurants', ['status' => 'active']),
+            'inactive_restaurants' => $this->safeCount('restaurants', ['status' => 'inactive']),
+            'total_bookings' => $this->safeCount('bookings'),
             'pending_bookings' => $this->safeCount('bookings', ['status' => 'pending']),
             'confirmed_bookings' => $this->safeCount('bookings', ['status' => 'confirmed']),
             'cancelled_bookings' => $this->safeCount('bookings', ['status' => 'cancelled']),
-            'total_revenue' => $this->safeSum('bookings', 'amount', ['status' => 'confirmed']),
-            'total_services' => $getCount('services'),
-            'total_destinations' => $getCount('destinations'),
+            'total_revenue' => $this->safeSum('bookings', 'estimated_total', ['status' => 'confirmed']),
         ];
 
-        // Get recent bookings
-        $recentBookings = $getData('bookings', 10);
-
-        // Get notifications
-        $notifications = $getData('notifications', 5);
+        $recentBookings = $this->getRecentBookings(10);
+        $notifications = $this->safeGet('notifications', 5);
 
         return view('admin.dashboard', compact('stats', 'recentBookings', 'notifications'));
     }
@@ -83,6 +61,47 @@ class DashboardController extends Controller
             return $query->sum($column) ?? 0;
         } catch (\Exception $e) {
             return 0;
+        }
+    }
+
+    /**
+     * Safely get limited rows.
+     */
+    private function safeGet($table, $limit = 10)
+    {
+        try {
+            return DB::table($table)
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+        } catch (\Exception $e) {
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get recent bookings with restaurant info.
+     */
+    private function getRecentBookings($limit = 10)
+    {
+        try {
+            return DB::table('bookings as b')
+                ->leftJoin('restaurants as r', 'r.id', '=', 'b.restaurant_id')
+                ->select(
+                    'b.id',
+                    'b.status',
+                    'b.check_in',
+                    'b.check_out',
+                    'b.guests',
+                    'b.rooms',
+                    'b.estimated_total',
+                    'r.restaurant_name'
+                )
+                ->orderBy('b.created_at', 'desc')
+                ->limit($limit)
+                ->get();
+        } catch (\Exception $e) {
+            return collect([]);
         }
     }
 }

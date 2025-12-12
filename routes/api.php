@@ -51,6 +51,13 @@ Route::middleware('auth:api')->group(function () {
         // Get single restaurant by ID
         Route::get('/{id}', [\App\Http\Controllers\Api\RestaurantController::class, 'show']);
     });
+    
+    // Bookings (no payment)
+    Route::prefix('bookings')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\BookingController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\BookingController::class, 'store']);
+        Route::post('/{id}/cancel', [\App\Http\Controllers\Api\BookingController::class, 'cancel']);
+    });
     // User profile routes
     Route::prefix('profile')->group(function () {
         // Get profile

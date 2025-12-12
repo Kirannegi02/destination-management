@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 class Restaurant extends Model
 {
@@ -12,7 +11,6 @@ class Restaurant extends Model
 
     protected $fillable = [
         'restaurant_name',
-        'agency_name',
         'address',
         'city',
         'state',
@@ -24,10 +22,10 @@ class Restaurant extends Model
         'website',
         'images',
         'star_rating',
+        'price',
         'amenities',
         'cuisine_type',
         'opening_hours',
-        'price_range',
         'seating_capacity',
         'description',
         'status',
@@ -55,29 +53,27 @@ class Restaurant extends Model
         'seating_capacity' => 'integer',
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
+        'price' => 'decimal:2',
     ];
 
     /**
-     * Get the user (agent) associated with this restaurant via agency_name
+     * Get formatted price for display (e.g., ₹1,234.00)
      */
-    public function agent()
+    public function getPriceFormattedAttribute()
     {
-        return $this->belongsTo(User::class, 'agency_name', 'agency_name');
+        if ($this->price === null) {
+            return null;
+        }
+
+        return '₹' . number_format((float) $this->price, 2);
     }
 
     /**
-     * Get price range label
+     * Backward-compatible alias for legacy views expecting price_range_label
      */
     public function getPriceRangeLabelAttribute()
     {
-        $labels = [
-            'low' => '₹ (Budget)',
-            'medium' => '₹₹ (Moderate)',
-            'high' => '₹₹₹ (Expensive)',
-            'premium' => '₹₹₹₹ (Premium)',
-        ];
-
-        return $labels[$this->price_range] ?? $this->price_range;
+        return $this->price_formatted;
     }
 
     /**
@@ -86,14 +82,6 @@ class Restaurant extends Model
     public function getStatusBadgeClassAttribute()
     {
         return $this->status === 'active' ? 'badge-success' : 'badge-danger';
-    }
-
-    /**
-     * Scope to filter by agency name
-     */
-    public function scopeByAgency($query, $agencyName)
-    {
-        return $query->where('agency_name', $agencyName);
     }
 
     /**

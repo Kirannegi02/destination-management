@@ -374,7 +374,10 @@
                 <a href="{{ route('admin.dashboard') }}" class="menu-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                     📊 Dashboard
                 </a>
-                <a href="#" class="menu-item">
+                @php
+                    $isBookingsActive = request()->routeIs('admin.bookings.*');
+                @endphp
+                <a href="{{ route('admin.bookings.index') }}" class="menu-item {{ $isBookingsActive ? 'active' : '' }}">
                     📋 Bookings
                 </a>
                 
@@ -451,7 +454,7 @@
             <header class="header">
                 <h1 class="header-title">@yield('page-title', 'Dashboard')</h1>
                 <div class="header-actions">
-                    <div class="user-info">
+                    <a href="{{ route('admin.profile.edit') }}" class="user-info" style="text-decoration: none; color: inherit;">
                         <div class="user-avatar">
                             {{ strtoupper(substr(auth('admin')->user()->name, 0, 1)) }}
                         </div>
@@ -459,7 +462,7 @@
                             <div class="user-name">{{ auth('admin')->user()->name }}</div>
                             <div class="user-role">Administrator</div>
                         </div>
-                    </div>
+                    </a>
                     <form action="{{ route('admin.logout') }}" method="POST">
                         @csrf
                         <button type="submit" class="btn-logout">Logout</button>

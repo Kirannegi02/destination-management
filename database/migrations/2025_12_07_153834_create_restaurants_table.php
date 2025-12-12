@@ -16,7 +16,6 @@ return new class extends Migration
             
             // Basic Information
             $table->string('restaurant_name');
-            $table->string('agency_name'); // To categorize by agent/agency
             $table->text('description')->nullable();
             
             // Address Information
@@ -37,7 +36,7 @@ return new class extends Migration
             
             // Rating and Classification
             $table->tinyInteger('star_rating')->nullable()->comment('1-5 star rating');
-            $table->enum('price_range', ['low', 'medium', 'high', 'premium'])->nullable();
+            $table->decimal('price', 10, 2)->nullable()->comment('Average price');
             
             // Restaurant Details
             $table->string('cuisine_type')->nullable()->comment('e.g., Indian, Chinese, Italian, etc.');
@@ -68,7 +67,6 @@ return new class extends Migration
             $table->timestamps();
             
             // Indexes for better query performance
-            $table->index('agency_name');
             $table->index('status');
             $table->index('city');
             $table->index('state');

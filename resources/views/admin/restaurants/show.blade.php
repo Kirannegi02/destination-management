@@ -56,10 +56,6 @@
                                 <strong style="color: #4a5568; display: block; margin-bottom: 4px;">Restaurant Name:</strong>
                                 <span style="color: #2d3748; font-size: 16px;">{{ $restaurant->restaurant_name }}</span>
                             </div>
-                            <div>
-                                <strong style="color: #4a5568; display: block; margin-bottom: 4px;">Agency Name:</strong>
-                                <span style="color: #2d3748;">{{ $restaurant->agency_name }}</span>
-                            </div>
                             @if($restaurant->description)
                                 <div>
                                     <strong style="color: #4a5568; display: block; margin-bottom: 4px;">Description:</strong>
@@ -73,10 +69,10 @@
                                         <span style="color: #fbbf24; font-size: 18px;">⭐ {{ $restaurant->star_rating }}/5</span>
                                     </div>
                                 @endif
-                                @if($restaurant->price_range)
+                                @if($restaurant->price)
                                     <div>
-                                        <strong style="color: #4a5568; display: block; margin-bottom: 4px; font-size: 12px;">Price Range:</strong>
-                                        <span style="color: #667eea; font-weight: 600;">{{ $restaurant->price_range_label }}</span>
+                                        <strong style="color: #4a5568; display: block; margin-bottom: 4px; font-size: 12px;">Price:</strong>
+                                        <span style="color: #667eea; font-weight: 600;">{{ $restaurant->price_formatted }}</span>
                                     </div>
                                 @endif
                                 @if($restaurant->cuisine_type)

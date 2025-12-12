@@ -46,24 +46,6 @@
                         @enderror
                     </div>
 
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                            Agency Name <span style="color: #e53e3e;">*</span>
-                        </label>
-                        <select name="agency_name" 
-                                required
-                                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                            <option value="">Select Agency</option>
-                            @foreach($agencyNames as $agencyName)
-                                <option value="{{ $agencyName }}" {{ old('agency_name') == $agencyName ? 'selected' : '' }}>
-                                    {{ $agencyName }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('agency_name')
-                            <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                        @enderror
-                    </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 20px;">
@@ -99,17 +81,16 @@
 
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                            Price Range
+                            Price
                         </label>
-                        <select name="price_range" 
-                                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                            <option value="">Select Price Range</option>
-                            <option value="low" {{ old('price_range') == 'low' ? 'selected' : '' }}>₹ (Budget)</option>
-                            <option value="medium" {{ old('price_range') == 'medium' ? 'selected' : '' }}>₹₹ (Moderate)</option>
-                            <option value="high" {{ old('price_range') == 'high' ? 'selected' : '' }}>₹₹₹ (Expensive)</option>
-                            <option value="premium" {{ old('price_range') == 'premium' ? 'selected' : '' }}>₹₹₹₹ (Premium)</option>
-                        </select>
-                        @error('price_range')
+                        <input type="number" 
+                               name="price" 
+                               value="{{ old('price') }}"
+                               step="0.01"
+                               min="0"
+                               placeholder="Enter average price"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                        @error('price')
                             <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
                         @enderror
                     </div>

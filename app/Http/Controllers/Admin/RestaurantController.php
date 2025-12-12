@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Restaurant;
-use App\Models\User;
 use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -23,16 +22,10 @@ class RestaurantController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('restaurant_name', 'like', "%{$search}%")
-                  ->orWhere('agency_name', 'like', "%{$search}%")
                   ->orWhere('city', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
-        }
-
-        // Filter by agency name
-        if ($request->has('agency_name') && $request->agency_name) {
-            $query->where('agency_name', $request->agency_name);
         }
 
         // Filter by status
@@ -51,15 +44,14 @@ class RestaurantController extends Controller
             $query->where('cuisine_type', $request->cuisine_type);
         }
 
-        // Filter by price range
-        if ($request->has('price_range') && $request->price_range) {
-            $query->where('price_range', $request->price_range);
+        // Filter by price (accepts legacy price_range param for compatibility)
+        if ($request->filled('price')) {
+            $query->where('price', $request->price);
+        } elseif ($request->filled('price_range')) {
+            $query->where('price', $request->price_range);
         }
 
         $restaurants = $query->orderBy('created_at', 'desc')->paginate(15);
-
-        // Get unique agency names for filter
-        $agencyNames = Restaurant::distinct()->pluck('agency_name')->sort()->values();
 
         // Get unique cities for filter
         $cities = Restaurant::distinct()->whereNotNull('city')->pluck('city')->sort()->values();
@@ -76,7 +68,6 @@ class RestaurantController extends Controller
         return view('admin.restaurants.index', compact(
             'restaurants', 
             'status', 
-            'agencyNames', 
             'cities',
             'cuisineTypes',
             'allCount',
@@ -91,14 +82,7 @@ class RestaurantController extends Controller
      */
     public function create()
     {
-        // Get all unique agency names from users table for dropdown
-        $agencyNames = User::whereNotNull('agency_name')
-            ->distinct()
-            ->pluck('agency_name')
-            ->sort()
-            ->values();
-
-        return view('admin.restaurants.create', compact('agencyNames'));
+        return view('admin.restaurants.create');
     }
 
     /**
@@ -108,7 +92,6 @@ class RestaurantController extends Controller
     {
         $validated = $request->validate([
             'restaurant_name' => 'required|string|max:255',
-            'agency_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'address' => 'required|string',
             'city' => 'nullable|string|max:100',
@@ -122,7 +105,7 @@ class RestaurantController extends Controller
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'star_rating' => 'nullable|integer|min:1|max:5',
-            'price_range' => 'nullable|in:low,medium,high,premium',
+            'price' => 'nullable|numeric|min:0',
             'cuisine_type' => 'nullable|string|max:100',
             'seating_capacity' => 'nullable|integer|min:1',
             'opening_hours' => 'nullable|array',
@@ -208,14 +191,7 @@ class RestaurantController extends Controller
     {
         $restaurant = Restaurant::findOrFail($id);
         
-        // Get all unique agency names from users table for dropdown
-        $agencyNames = User::whereNotNull('agency_name')
-            ->distinct()
-            ->pluck('agency_name')
-            ->sort()
-            ->values();
-
-        return view('admin.restaurants.edit', compact('restaurant', 'agencyNames'));
+        return view('admin.restaurants.edit', compact('restaurant'));
     }
 
     /**
@@ -227,7 +203,6 @@ class RestaurantController extends Controller
 
         $validated = $request->validate([
             'restaurant_name' => 'required|string|max:255',
-            'agency_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'address' => 'required|string',
             'city' => 'nullable|string|max:100',
@@ -241,7 +216,7 @@ class RestaurantController extends Controller
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'star_rating' => 'nullable|integer|min:1|max:5',
-            'price_range' => 'nullable|in:low,medium,high,premium',
+            'price' => 'nullable|numeric|min:0',
             'cuisine_type' => 'nullable|string|max:100',
             'seating_capacity' => 'nullable|integer|min:1',
             'opening_hours' => 'nullable|array',

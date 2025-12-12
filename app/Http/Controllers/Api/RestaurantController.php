@@ -28,26 +28,13 @@ class RestaurantController extends Controller
                 ], 401);
             }
 
-            // Check if user has agency_name
-            if (!$user->agency_name) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Agency name not found. Please complete your profile first.'
-                ], 400);
-            }
-
             $query = Restaurant::query();
-
-            // Filter by logged-in user's agency_name (agents can only see their own restaurants)
-            $query->where('agency_name', $user->agency_name);
 
             // Filter by status (default to active only)
             $status = $request->get('status', 'active');
             if ($status !== 'all') {
                 $query->where('status', $status);
             }
-
-            // Note: agency_name filter is removed from request filters since it's automatically applied
 
             // Filter by city
             if ($request->has('city') && $request->city) {
@@ -69,9 +56,13 @@ class RestaurantController extends Controller
                 $query->where('cuisine_type', 'like', '%' . $request->cuisine_type . '%');
             }
 
-            // Filter by price_range
-            if ($request->has('price_range') && $request->price_range) {
-                $query->where('price_range', $request->price_range);
+            // Filter by price (support legacy price_range param)
+            $priceFilter = $request->get('price');
+            if ($priceFilter === null || $priceFilter === '') {
+                $priceFilter = $request->get('price_range');
+            }
+            if ($priceFilter !== null && $priceFilter !== '') {
+                $query->where('price', $priceFilter);
             }
 
             // Filter by star_rating
@@ -159,7 +150,10 @@ class RestaurantController extends Controller
             $sortBy = $request->get('sort_by', 'created_at'); // Default sort by created_at
             $sortOrder = $request->get('sort_order', 'desc'); // Default descending
             
-            $allowedSortFields = ['created_at', 'restaurant_name', 'star_rating', 'seating_capacity', 'price_range'];
+            $allowedSortFields = ['created_at', 'restaurant_name', 'star_rating', 'seating_capacity', 'price'];
+            if ($sortBy === 'price_range') {
+                $sortBy = 'price';
+            }
             if (in_array($sortBy, $allowedSortFields)) {
                 $query->orderBy($sortBy, $sortOrder);
             } else {
@@ -246,15 +240,6 @@ class RestaurantController extends Controller
                 ], 401);
             }
 
-            // Check if user has agency_name
-            if (!$user->agency_name) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Agency name not found. Please complete your profile first.',
-                    'error' => 'Profile incomplete'
-                ], 400);
-            }
-
             // Validate restaurant ID
             if (!is_numeric($id) || $id <= 0) {
                 return response()->json([
@@ -264,9 +249,7 @@ class RestaurantController extends Controller
                 ], 400);
             }
 
-            $restaurant = Restaurant::where('id', $id)
-                ->where('agency_name', $user->agency_name)
-                ->first();
+            $restaurant = Restaurant::where('id', $id)->first();
 
             if (!$restaurant) {
                 // Return 200 with null data instead of 404
@@ -345,7 +328,6 @@ class RestaurantController extends Controller
         return [
             'id' => $restaurant->id,
             'restaurant_name' => $restaurant->restaurant_name,
-            'agency_name' => $restaurant->agency_name,
             'description' => $restaurant->description,
             'address' => $restaurant->address,
             'city' => $restaurant->city,
@@ -358,7 +340,10 @@ class RestaurantController extends Controller
             'website' => $restaurant->website,
             'images' => $images,
             'star_rating' => $restaurant->star_rating,
-            'price_range' => $restaurant->price_range,
+            'price' => $restaurant->price ? (float) $restaurant->price : null,
+            'price_formatted' => $restaurant->price_formatted,
+            // Legacy keys for backward compatibility
+            'price_range' => $restaurant->price ? (float) $restaurant->price : null,
             'price_range_label' => $restaurant->price_range_label,
             'cuisine_type' => $restaurant->cuisine_type,
             'seating_capacity' => $restaurant->seating_capacity,
@@ -388,13 +373,11 @@ class RestaurantController extends Controller
      */
     private function getAppliedFilters($request, $user)
     {
-        $filters = [
-            'agency_name' => $user->agency_name, // Always show the user's agency
-        ];
+        $filters = [];
         
         $filterFields = [
             'status', 'city', 'state', 'country', 
-            'cuisine_type', 'price_range', 'star_rating', 'min_rating',
+            'cuisine_type', 'price', 'price_range', 'star_rating', 'min_rating',
             'min_capacity', 'max_capacity', 'parking_available', 
             'wifi_available', 'accepts_reservations', 'search',
             'amenities', 'payment_methods', 'sort_by', 'sort_order', 'per_page'
@@ -428,20 +411,10 @@ class RestaurantController extends Controller
                 ], 401);
             }
 
-            // Check if user has agency_name
-            if (!$user->agency_name) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Agency name not found. Please complete your profile first.',
-                    'error' => 'Profile incomplete'
-                ], 400);
-            }
-
-            // Filter restaurants by logged-in user's agency_name
-            $restaurantQuery = Restaurant::where('agency_name', $user->agency_name);
+            // Use all restaurants (no agency scoping)
+            $restaurantQuery = Restaurant::query();
 
             $options = [
-                'agency_name' => $user->agency_name, // Show the user's agency name
                 'cities' => (clone $restaurantQuery)->distinct()
                     ->whereNotNull('city')
                     ->pluck('city')
@@ -466,12 +439,24 @@ class RestaurantController extends Controller
                     ->sort()
                     ->values()
                     ->toArray(),
-                'price_ranges' => ['low', 'medium', 'high', 'premium'],
+                'prices' => (clone $restaurantQuery)->distinct()
+                    ->whereNotNull('price')
+                    ->pluck('price')
+                    ->sort()
+                    ->values()
+                    ->toArray(),
+                // Legacy key preserved for compatibility with older clients
+                'price_ranges' => (clone $restaurantQuery)->distinct()
+                    ->whereNotNull('price')
+                    ->pluck('price')
+                    ->sort()
+                    ->values()
+                    ->toArray(),
                 'star_ratings' => [1, 2, 3, 4, 5],
                 'statuses' => ['active', 'inactive', 'pending'],
             ];
 
-            // Get all unique amenities from user's restaurants only
+            // Get all unique amenities from all restaurants
             $allAmenities = [];
             (clone $restaurantQuery)->whereNotNull('amenities')->get()->each(function ($restaurant) use (&$allAmenities) {
                 if ($restaurant->amenities && is_array($restaurant->amenities)) {
@@ -480,7 +465,7 @@ class RestaurantController extends Controller
             });
             $options['amenities'] = array_values(array_unique($allAmenities));
 
-            // Get all unique payment methods from user's restaurants only
+            // Get all unique payment methods from all restaurants
             $allPaymentMethods = [];
             (clone $restaurantQuery)->whereNotNull('payment_methods')->get()->each(function ($restaurant) use (&$allPaymentMethods) {
                 if ($restaurant->payment_methods && is_array($restaurant->payment_methods)) {

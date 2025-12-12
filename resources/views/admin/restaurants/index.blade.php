@@ -4,6 +4,21 @@
 @section('page-title', 'Restaurants Management')
 
 @section('content')
+    <style>
+        .status-tab {
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .status-tab--active {
+            background: #667eea;
+            color: white;
+        }
+        .status-tab--inactive {
+            color: #4a5568;
+        }
+    </style>
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">
@@ -21,19 +36,19 @@
                 <!-- Status Tabs -->
                 <div style="display: flex; gap: 4px; background: #f7fafc; padding: 4px; border-radius: 6px;">
                     <a href="{{ route('admin.restaurants.index', ['status' => 'all']) }}" 
-                       style="padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; {{ $status == 'all' ? 'background: #667eea; color: white;' : 'color: #4a5568;' }}">
+                       class="status-tab {{ $status == 'all' ? 'status-tab--active' : 'status-tab--inactive' }}">
                         All ({{ $allCount }})
                     </a>
                     <a href="{{ route('admin.restaurants.index', ['status' => 'active']) }}" 
-                       style="padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; {{ $status == 'active' ? 'background: #667eea; color: white;' : 'color: #4a5568;' }}">
+                       class="status-tab {{ $status == 'active' ? 'status-tab--active' : 'status-tab--inactive' }}">
                         Active ({{ $activeCount }})
                     </a>
                     <a href="{{ route('admin.restaurants.index', ['status' => 'inactive']) }}" 
-                       style="padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; {{ $status == 'inactive' ? 'background: #667eea; color: white;' : 'color: #4a5568;' }}">
+                       class="status-tab {{ $status == 'inactive' ? 'status-tab--active' : 'status-tab--inactive' }}">
                         Inactive ({{ $inactiveCount }})
                     </a>
                     <a href="{{ route('admin.restaurants.index', ['status' => 'pending']) }}" 
-                       style="padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; {{ $status == 'pending' ? 'background: #667eea; color: white;' : 'color: #4a5568;' }}">
+                       class="status-tab {{ $status == 'pending' ? 'status-tab--active' : 'status-tab--inactive' }}">
                         Pending ({{ $pendingCount }})
                     </a>
                 </div>
@@ -52,19 +67,6 @@
                            value="{{ request('search') }}" 
                            placeholder="Search restaurants..." 
                            style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-                </div>
-                
-                <div style="flex: 1; min-width: 180px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #4a5568;">Agency Name</label>
-                    <select name="agency_name" 
-                            style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-                        <option value="">All Agencies</option>
-                        @foreach($agencyNames as $agencyName)
-                            <option value="{{ $agencyName }}" {{ request('agency_name') == $agencyName ? 'selected' : '' }}>
-                                {{ $agencyName }}
-                            </option>
-                        @endforeach
-                    </select>
                 </div>
                 
                 <div style="flex: 1; min-width: 150px;">
@@ -94,15 +96,14 @@
                 </div>
                 
                 <div style="flex: 1; min-width: 150px;">
-                    <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #4a5568;">Price Range</label>
-                    <select name="price_range" 
-                            style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-                        <option value="">All Price Ranges</option>
-                        <option value="low" {{ request('price_range') == 'low' ? 'selected' : '' }}>₹ (Budget)</option>
-                        <option value="medium" {{ request('price_range') == 'medium' ? 'selected' : '' }}>₹₹ (Moderate)</option>
-                        <option value="high" {{ request('price_range') == 'high' ? 'selected' : '' }}>₹₹₹ (Expensive)</option>
-                        <option value="premium" {{ request('price_range') == 'premium' ? 'selected' : '' }}>₹₹₹₹ (Premium)</option>
-                    </select>
+                    <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #4a5568;">Price</label>
+                    <input type="number" 
+                           name="price" 
+                           value="{{ request('price') }}" 
+                           step="0.01"
+                           min="0"
+                           placeholder="Filter by price"
+                           style="width: 100%; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
                 </div>
                 
                 <div style="display: flex; gap: 8px;">
@@ -110,7 +111,7 @@
                             style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
                         Filter
                     </button>
-                    @if(request('search') || request('agency_name') || request('city') || request('cuisine_type') || request('price_range'))
+                    @if(request('search') || request('city') || request('cuisine_type') || request('price'))
                         <a href="{{ route('admin.restaurants.index', ['status' => $status]) }}" 
                            style="padding: 8px 16px; background: #e2e8f0; color: #2d3748; border-radius: 6px; text-decoration: none; font-size: 14px; display: inline-block;">
                             Clear
@@ -127,7 +128,6 @@
                         <th>ID</th>
                         <th>Image</th>
                         <th>Restaurant Name</th>
-                        <th>Agency</th>
                         <th>Location</th>
                         <th>Contact</th>
                         <th>Rating</th>
@@ -155,14 +155,13 @@
                                 @if($restaurant->cuisine_type)
                                     <br><small style="color: #718096;">🍴 {{ $restaurant->cuisine_type }}</small>
                                 @endif
-                                @if($restaurant->price_range)
-                                    <br><small style="color: #667eea;">{{ $restaurant->price_range_label }}</small>
+                                @if($restaurant->price)
+                                    <br><small style="color: #667eea;">{{ $restaurant->price_formatted }}</small>
                                 @endif
                                 @if($restaurant->seating_capacity)
                                     <br><small style="color: #4a5568;">👥 Capacity: {{ $restaurant->seating_capacity }} seats</small>
                                 @endif
                             </td>
-                            <td>{{ $restaurant->agency_name }}</td>
                             <td>
                                 @if($restaurant->city)
                                     {{ $restaurant->city }}

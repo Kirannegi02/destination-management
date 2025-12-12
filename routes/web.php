@@ -114,6 +114,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('restaurants', \App\Http\Controllers\Admin\RestaurantController::class);
         Route::get('/restaurants', [\App\Http\Controllers\Admin\RestaurantController::class, 'index'])->name('restaurants.index');
         Route::get('/restaurants/{restaurant}', [\App\Http\Controllers\Admin\RestaurantController::class, 'show'])->name('restaurants.show');
+
+        // Booking routes
+        Route::resource('bookings', \App\Http\Controllers\Admin\BookingController::class)->only(['index', 'show']);
+        Route::post('/bookings/{booking}/status', [\App\Http\Controllers\Admin\BookingController::class, 'updateStatus'])->name('bookings.status');
+
+        // Admin profile
+        Route::get('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::post('/profile/password', [\App\Http\Controllers\Admin\ProfileController::class, 'updatePassword'])->name('profile.password');
         
         // Settings routes
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');

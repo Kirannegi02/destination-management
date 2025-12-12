@@ -8,6 +8,33 @@
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-header">
+                <div class="stat-title">Total Restaurants</div>
+                <div class="stat-icon" style="background: #dbeafe; color: #1e40af;">🍽️</div>
+            </div>
+            <div class="stat-value">{{ number_format($stats['total_restaurants'] ?? 0) }}</div>
+            <div class="stat-change">All restaurants</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-title">Active Restaurants</div>
+                <div class="stat-icon" style="background: #c6f6d5; color: #22543d;">✅</div>
+            </div>
+            <div class="stat-value">{{ number_format($stats['active_restaurants'] ?? 0) }}</div>
+            <div class="stat-change">Currently active</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-title">Inactive Restaurants</div>
+                <div class="stat-icon" style="background: #ffe4e6; color: #9b1c1c;">⏸️</div>
+            </div>
+            <div class="stat-value">{{ number_format($stats['inactive_restaurants'] ?? 0) }}</div>
+            <div class="stat-change">Marked inactive</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
                 <div class="stat-title">Total Bookings</div>
                 <div class="stat-icon" style="background: #dbeafe; color: #1e40af;">📋</div>
             </div>
@@ -35,29 +62,20 @@
 
         <div class="stat-card">
             <div class="stat-header">
-                <div class="stat-title">Total Revenue</div>
+                <div class="stat-title">Cancelled Bookings</div>
+                <div class="stat-icon" style="background: #ffe4e6; color: #9b1c1c;">❌</div>
+            </div>
+            <div class="stat-value">{{ number_format($stats['cancelled_bookings'] ?? 0) }}</div>
+            <div class="stat-change">Total cancelled</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-title">Total Estimated</div>
                 <div class="stat-icon" style="background: #d1fae5; color: #065f46;">💰</div>
             </div>
             <div class="stat-value">₹{{ number_format($stats['total_revenue'] ?? 0) }}</div>
             <div class="stat-change">From confirmed bookings</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Total Services</div>
-                <div class="stat-icon" style="background: #e9d5ff; color: #6b21a8;">🏨</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['total_services'] ?? 0) }}</div>
-            <div class="stat-change">Available services</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Destinations</div>
-                <div class="stat-icon" style="background: #fce7f3; color: #9f1239;">🌍</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['total_destinations'] ?? 0) }}</div>
-            <div class="stat-change">Active destinations</div>
         </div>
     </div>
 
@@ -65,31 +83,37 @@
         <!-- Recent Bookings -->
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Recent Bookings Summary</h2>
-                <a href="#" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 500;">View All</a>
+                <h2 class="card-title">Recent Restaurant Bookings</h2>
+                <a href="{{ route('admin.bookings.index') }}" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 500;">View All</a>
             </div>
             @if(isset($recentBookings) && $recentBookings->count() > 0)
                 <table class="table">
                     <thead>
                         <tr>
                             <th>Booking ID</th>
-                            <th>Service Type</th>
-                            <th>Destination</th>
-                            <th>Date</th>
-                            <th>Pax</th>
-                            <th>Amount</th>
+                            <th>Restaurant</th>
+                            <th>Check-In</th>
+                            <th>Check-Out</th>
+                            <th>Guests / Rooms</th>
+                            <th>Est. Total</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($recentBookings as $booking)
                             <tr>
-                                <td>{{ $booking->booking_id ?? 'N/A' }}</td>
-                                <td>{{ $booking->service_type ?? 'N/A' }}</td>
-                                <td>{{ $booking->destination ?? 'N/A' }}</td>
-                                <td>{{ $booking->booking_date ?? 'N/A' }}</td>
-                                <td>{{ $booking->pax ?? 'N/A' }}</td>
-                                <td>₹{{ number_format($booking->amount ?? 0) }}</td>
+                                <td>#{{ $booking->id }}</td>
+                                <td>{{ $booking->restaurant_name ?? 'N/A' }}</td>
+                                <td>{{ $booking->check_in ? \Carbon\Carbon::parse($booking->check_in)->format('Y-m-d H:i') : 'N/A' }}</td>
+                                <td>{{ $booking->check_out ? \Carbon\Carbon::parse($booking->check_out)->format('Y-m-d H:i') : 'N/A' }}</td>
+                                <td>{{ $booking->guests ?? '0' }} / {{ $booking->rooms ?? '0' }}</td>
+                                <td>
+                                    @if($booking->estimated_total !== null)
+                                        ₹{{ number_format((float) $booking->estimated_total, 2) }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
                                 <td>
                                     @php
                                         $status = strtolower($booking->status ?? 'pending');
