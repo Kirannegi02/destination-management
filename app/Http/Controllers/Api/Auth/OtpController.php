@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OtpMail;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 // Load JWT stubs if the package is not installed
@@ -82,17 +84,8 @@ class OtpController extends Controller
             }
 
             // Generate OTP
-            // For now, use static OTP since SMTP/Firebase are not configured
-            $staticOtp = '123456';
-            
-            // In production, use: $otp = $user->generateOtp($otpType);
-            // For now, manually set OTP
             try {
-                $user->update([
-                    'otp' => $staticOtp,
-                    'otp_expires_at' => now()->addMinutes(10),
-                    'otp_type' => $otpType,
-                ]);
+                $otp = $user->generateOtp($otpType);
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
@@ -101,14 +94,25 @@ class OtpController extends Controller
                 ], 500); // Internal Server Error
             }
 
-            // TODO: Send OTP via email or SMS
-            // For now, just return success (in production, send actual OTP)
-            // When SMTP/Firebase are configured, implement:
-            // if ($otpType === 'email') {
-            //     // Send email via SMTP
-            // } else {
-            //     // Send SMS via Firebase
-            // }
+            // Send OTP via email or SMS
+            try {
+                if ($otpType === 'email' && $user->email) {
+                    // Send email via SMTP
+                    Mail::to($user->email)->send(new OtpMail($otp, $user->name ?? 'User'));
+                } elseif ($otpType === 'sms' && $user->phone) {
+                    // TODO: Send SMS via Firebase when configured
+                    // For now, log that SMS should be sent
+                    \Log::info('SMS OTP generated for user', [
+                        'user_id' => $user->id,
+                        'phone' => $user->phone,
+                        'otp' => $otp
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Log the error but don't fail the OTP generation
+                \Log::error('Failed to send OTP: ' . $e->getMessage());
+                // Continue and return success - OTP is generated and stored
+            }
 
             return response()->json([
                 'success' => true,
@@ -116,7 +120,6 @@ class OtpController extends Controller
                 'data' => [
                     'identifier' => $identifier,
                     'type' => $otpType,
-                    'otp' => $staticOtp, // Remove this in production - only for testing
                     'expires_in' => 10, // minutes
                 ]
             ], 200); // OK
@@ -164,24 +167,7 @@ class OtpController extends Controller
         }
 
         // Verify OTP
-        // For static OTP during development, accept '123456'
-        // In production, remove the static check and only use: $user->verifyOtp($otp)
-        $staticOtp = '123456';
-        $isValidOtp = false;
-        
-        if ($user->otp === $staticOtp && $otp === $staticOtp) {
-            // Static OTP verification (for development)
-            $isValidOtp = true;
-            // Clear OTP after verification
-            $user->update([
-                'otp' => null,
-                'otp_expires_at' => null,
-                'otp_type' => null,
-            ]);
-        } else {
-            // Normal OTP verification (for production)
-            $isValidOtp = $user->verifyOtp($otp);
-        }
+        $isValidOtp = $user->verifyOtp($otp);
 
         if (!$isValidOtp) {
             return response()->json([
