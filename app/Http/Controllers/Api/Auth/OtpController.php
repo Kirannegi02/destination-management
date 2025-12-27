@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Mail\OtpMail;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
@@ -95,33 +97,71 @@ class OtpController extends Controller
             }
 
             // Send OTP via email or SMS
+            $responseData = [
+                'identifier' => $identifier,
+                'type' => $otpType,
+                'expires_in' => 10, // minutes
+            ];
+
             try {
                 if ($otpType === 'email' && $user->email) {
                     // Send email via SMTP
                     Mail::to($user->email)->send(new OtpMail($otp, $user->name ?? 'User'));
                 } elseif ($otpType === 'sms' && $user->phone) {
-                    // TODO: Send SMS via Firebase when configured
-                    // For now, log that SMS should be sent
-                    \Log::info('SMS OTP generated for user', [
+                    // Format phone number for SMS (E.164 format)
+                    $phoneNumber = $user->country_code 
+                        ? $user->country_code . $user->phone 
+                        : $user->phone;
+                    
+                    // Ensure phone number starts with +
+                    if (strpos($phoneNumber, '+') !== 0) {
+                        $phoneNumber = '+' . $phoneNumber;
+                    }
+                    
+                    // IMPORTANT: Firebase Phone Auth cannot send SMS from server-side
+                    // Firebase requires client-side SDK to send SMS
+                    // The OTP is generated and stored in database for verification
+                    // Client must use Firebase SDK to send SMS, then use /verify-otp to verify with backend OTP
+                    
+                    // Get Firebase config for client-side implementation
+                    $firebaseApiKey = Setting::get('firebase_api_key', '');
+                    $firebaseProjectId = Setting::get('firebase_project_id', '');
+                    $firebaseSenderId = Setting::get('firebase_sender_id', '');
+                    $firebaseAppId = Setting::get('firebase_app_id', '');
+                    
+                    if ($firebaseApiKey && $firebaseProjectId) {
+                        $responseData['firebase_config'] = [
+                            'apiKey' => $firebaseApiKey,
+                            'authDomain' => $firebaseProjectId . '.firebaseapp.com',
+                            'projectId' => $firebaseProjectId,
+                            'storageBucket' => $firebaseProjectId . '.firebasestorage.app',
+                            'messagingSenderId' => $firebaseSenderId,
+                            'appId' => $firebaseAppId,
+                        ];
+                        $responseData['requires_firebase_sdk'] = true;
+                        $responseData['instructions'] = 'Use Firebase SDK signInWithPhoneNumber() to send SMS. Then verify OTP with /verify-otp endpoint using the OTP from your database.';
+                    }
+                    
+                    $responseData['phone_number'] = $phoneNumber;
+                    $responseData['otp_generated'] = true; // OTP is in database, ready for verification
+                    
+                    Log::info('SMS OTP generated for user (requires Firebase client SDK to send SMS)', [
                         'user_id' => $user->id,
-                        'phone' => $user->phone,
-                        'otp' => $otp
+                        'phone' => $phoneNumber,
+                        'otp' => $otp,
+                        'note' => 'Client must use Firebase SDK to send SMS'
                     ]);
                 }
             } catch (\Exception $e) {
                 // Log the error but don't fail the OTP generation
-                \Log::error('Failed to send OTP: ' . $e->getMessage());
+                Log::error('Failed to send OTP: ' . $e->getMessage());
                 // Continue and return success - OTP is generated and stored
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'OTP sent successfully',
-                'data' => [
-                    'identifier' => $identifier,
-                    'type' => $otpType,
-                    'expires_in' => 10, // minutes
-                ]
+                'data' => $responseData
             ], 200); // OK
         } catch (\Exception $e) {
             return response()->json([

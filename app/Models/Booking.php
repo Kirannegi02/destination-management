@@ -12,6 +12,9 @@ class Booking extends Model
     protected $fillable = [
         'user_id',
         'restaurant_id',
+        'meal_id',
+        'meal_type',
+        'meal_price_inr',
         'check_in',
         'check_out',
         'rooms',
@@ -31,6 +34,7 @@ class Booking extends Model
         'guests' => 'integer',
         'guests_details' => 'array',
         'estimated_total' => 'decimal:2',
+        'meal_price_inr' => 'decimal:2',
     ];
 
     public function user()
@@ -41,6 +45,11 @@ class Booking extends Model
     public function restaurant()
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function meal()
+    {
+        return $this->belongsTo(Meal::class);
     }
 }
 

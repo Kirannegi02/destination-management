@@ -14,7 +14,7 @@ class BookingController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Booking::with(['restaurant', 'user'])->orderBy('created_at', 'desc');
+        $query = Booking::with(['restaurant', 'user', 'meal'])->orderBy('created_at', 'desc');
 
         // Optional filters
         if ($request->filled('status')) {
@@ -37,7 +37,7 @@ class BookingController extends Controller
      */
     public function show(string $id)
     {
-        $booking = Booking::with(['restaurant', 'user'])->findOrFail($id);
+        $booking = Booking::with(['restaurant', 'user', 'meal'])->findOrFail($id);
 
         return view('admin.bookings.show', compact('booking'));
     }

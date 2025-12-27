@@ -22,7 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Apply CORS to all requests (must run before auth to allow preflight)
-        $middleware->append(\App\Http\Middleware\Cors::class);
+        // Using prepend to ensure it runs first, before any authentication middleware
+        $middleware->prepend(\App\Http\Middleware\Cors::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Handle JWT authentication exceptions for API routes

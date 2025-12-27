@@ -91,5 +91,21 @@ class Restaurant extends Model
     {
         return $query->where('status', 'active');
     }
+
+    /**
+     * Get the meals for the restaurant.
+     */
+    public function meals()
+    {
+        return $this->hasMany(Meal::class);
+    }
+
+    /**
+     * Get active meals for the restaurant.
+     */
+    public function activeMeals()
+    {
+        return $this->hasMany(Meal::class)->where('status', 'active');
+    }
 }
 

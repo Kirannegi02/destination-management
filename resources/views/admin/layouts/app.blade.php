@@ -390,6 +390,14 @@
                 </a>
                 
                 @php
+                    $isMealsActive = request()->routeIs('admin.meals.*');
+                @endphp
+                <a href="{{ route('admin.meals.index') }}" 
+                   class="menu-item {{ $isMealsActive ? 'active' : '' }}">
+                    🍛 Meals
+                </a>
+                
+                @php
                     $serviceTypes = [
                         'guide' => ['icon' => '👨‍🏫', 'label' => 'Guides'],
                         'sightseeing' => ['icon' => '🏛️', 'label' => 'Sightseeing'],

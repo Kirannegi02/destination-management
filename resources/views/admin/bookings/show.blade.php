@@ -52,6 +52,28 @@
                 @else
                     <p style="font-weight: 600;">N/A</p>
                 @endif
+
+                <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                    <h4 style="color: #2d3748; margin-bottom: 6px;">Meal</h4>
+                    @if($booking->meal)
+                        <p style="margin: 0; font-weight: 600;">
+                            <a href="{{ route('admin.meals.show', $booking->meal_id) }}" style="color: #2b6cb0; text-decoration: none;">
+                                {{ $booking->meal->meal_type_label }}
+                            </a>
+                        </p>
+                        @if($booking->meal_price_inr)
+                            <p style="color: #48bb78; margin-top: 4px;">₹{{ number_format((float) $booking->meal_price_inr, 2) }}</p>
+                        @endif
+                        <p style="color: #718096; margin-top: 4px;">Meal ID: {{ $booking->meal_id }}</p>
+                    @elseif($booking->meal_type)
+                        <p style="margin: 0; font-weight: 600;">{{ $booking->meal_type }}</p>
+                        @if($booking->meal_price_inr)
+                            <p style="color: #48bb78; margin-top: 4px;">₹{{ number_format((float) $booking->meal_price_inr, 2) }}</p>
+                        @endif
+                    @else
+                        <p style="color: #718096; margin: 0;">Not provided</p>
+                    @endif
+                </div>
             </div>
 
             <div style="background: #f7fafc; padding: 16px; border-radius: 8px;">

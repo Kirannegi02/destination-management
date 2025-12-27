@@ -115,6 +115,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/restaurants', [\App\Http\Controllers\Admin\RestaurantController::class, 'index'])->name('restaurants.index');
         Route::get('/restaurants/{restaurant}', [\App\Http\Controllers\Admin\RestaurantController::class, 'show'])->name('restaurants.show');
 
+        // Meal routes
+        Route::resource('meals', \App\Http\Controllers\Admin\MealController::class);
+        Route::get('/meals', [\App\Http\Controllers\Admin\MealController::class, 'index'])->name('meals.index');
+
         // Booking routes
         Route::resource('bookings', \App\Http\Controllers\Admin\BookingController::class)->only(['index', 'show']);
         Route::post('/bookings/{booking}/status', [\App\Http\Controllers\Admin\BookingController::class, 'updateStatus'])->name('bookings.status');
