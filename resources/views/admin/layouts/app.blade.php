@@ -382,12 +382,64 @@
                 </a>
                 
                 @php
-                    $isRestaurantsActive = request()->routeIs('admin.restaurants.*');
+                    $isGuidesActive = request()->routeIs('admin.guides.*');
                 @endphp
-                <a href="{{ route('admin.restaurants.index') }}" 
-                   class="menu-item {{ $isRestaurantsActive ? 'active' : '' }}">
+                <div class="menu-item has-submenu {{ $isGuidesActive ? 'active' : '' }}" 
+                     onclick="toggleSubmenu(this)" 
+                     style="cursor: pointer;">
+                    👨‍🏫 Guides
+                    <span class="submenu-arrow" style="float: right; margin-top: 2px;">{{ $isGuidesActive ? '▼' : '▶' }}</span>
+                </div>
+                <div class="submenu {{ $isGuidesActive ? 'expanded' : '' }}">
+                    <a href="{{ route('admin.guides.create') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.guides.create') ? 'active' : '' }}">
+                        ➕ Add Guide
+                    </a>
+                    <a href="{{ route('admin.guides.index') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.guides.index') ? 'active' : '' }}">
+                        📋 All Guides
+                    </a>
+                    <a href="{{ route('admin.guides.import.form') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.guides.import*') ? 'active' : '' }}">
+                        ⬆️ Bulk Import
+                    </a>
+                    <a href="{{ route('admin.guides.export.page') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.guides.export*') ? 'active' : '' }}">
+                        ⬇️ Bulk Export
+                    </a>
+                </div>
+                
+                @php
+                    $restaurantMenuActive = request()->routeIs('admin.restaurants.*');
+                    $restaurantCreateActive = request()->routeIs('admin.restaurants.create');
+                    $restaurantIndexActive = request()->routeIs('admin.restaurants.index');
+                    $restaurantImportActive = request()->routeIs('admin.restaurants.import*');
+                    $restaurantExportActive = request()->routeIs('admin.restaurants.export*');
+                @endphp
+                <div class="menu-item has-submenu {{ $restaurantMenuActive ? 'active' : '' }}" 
+                     onclick="toggleSubmenu(this)" 
+                     style="cursor: pointer;">
                     🍽️ Restaurants
-                </a>
+                    <span class="submenu-arrow" style="float: right; margin-top: 2px;">{{ $restaurantMenuActive ? '▼' : '▶' }}</span>
+                </div>
+                <div class="submenu {{ $restaurantMenuActive ? 'expanded' : '' }}">
+                    <a href="{{ route('admin.restaurants.create') }}" 
+                       class="submenu-item {{ $restaurantCreateActive ? 'active' : '' }}">
+                        ➕ Add Restaurant
+                    </a>
+                    <a href="{{ route('admin.restaurants.index') }}" 
+                       class="submenu-item {{ $restaurantIndexActive ? 'active' : '' }}">
+                        📋 All Restaurants
+                    </a>
+                    <a href="{{ route('admin.restaurants.import.form') }}" 
+                       class="submenu-item {{ $restaurantImportActive ? 'active' : '' }}">
+                        ⬆️ Bulk Import
+                    </a>
+                    <a href="{{ route('admin.restaurants.export.page') }}" 
+                       class="submenu-item {{ $restaurantExportActive ? 'active' : '' }}">
+                        ⬇️ Bulk Export
+                    </a>
+                </div>
                 
                 @php
                     $isMealsActive = request()->routeIs('admin.meals.*');

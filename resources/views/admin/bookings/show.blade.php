@@ -61,6 +61,7 @@
                                 {{ $booking->meal->meal_type_label }}
                             </a>
                         </p>
+                    
                         @if($booking->meal_price_inr)
                             <p style="color: #48bb78; margin-top: 4px;">₹{{ number_format((float) $booking->meal_price_inr, 2) }}</p>
                         @endif

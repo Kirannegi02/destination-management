@@ -111,9 +111,28 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
         
         // Restaurant routes
+        Route::prefix('restaurants')->name('restaurants.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\Admin\RestaurantController::class, 'export'])->name('export');
+            Route::get('/export/page', [\App\Http\Controllers\Admin\RestaurantController::class, 'exportPage'])->name('export.page');
+            Route::get('/import', [\App\Http\Controllers\Admin\RestaurantController::class, 'importForm'])->name('import.form');
+            Route::post('/import', [\App\Http\Controllers\Admin\RestaurantController::class, 'import'])->name('import');
+            Route::get('/import/sample', [\App\Http\Controllers\Admin\RestaurantController::class, 'sample'])->name('import.sample');
+        });
         Route::resource('restaurants', \App\Http\Controllers\Admin\RestaurantController::class);
         Route::get('/restaurants', [\App\Http\Controllers\Admin\RestaurantController::class, 'index'])->name('restaurants.index');
         Route::get('/restaurants/{restaurant}', [\App\Http\Controllers\Admin\RestaurantController::class, 'show'])->name('restaurants.show');
+
+        // Guide routes
+        Route::prefix('guides')->name('guides.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\Admin\GuideController::class, 'export'])->name('export');
+            Route::get('/export/page', [\App\Http\Controllers\Admin\GuideController::class, 'exportPage'])->name('export.page');
+            Route::get('/import', [\App\Http\Controllers\Admin\GuideController::class, 'importForm'])->name('import.form');
+            Route::post('/import', [\App\Http\Controllers\Admin\GuideController::class, 'import'])->name('import');
+            Route::get('/import/sample', [\App\Http\Controllers\Admin\GuideController::class, 'sample'])->name('import.sample');
+        });
+        Route::resource('guides', \App\Http\Controllers\Admin\GuideController::class);
+        Route::get('/guides', [\App\Http\Controllers\Admin\GuideController::class, 'index'])->name('guides.index');
+        Route::get('/guides/{guide}', [\App\Http\Controllers\Admin\GuideController::class, 'show'])->name('guides.show');
 
         // Meal routes
         Route::resource('meals', \App\Http\Controllers\Admin\MealController::class);

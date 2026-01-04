@@ -19,6 +19,13 @@
             color: #4a5568;
         }
     </style>
+    @php
+        $exportFilters = array_filter([
+            'status' => $status !== 'all' ? $status : null,
+            'city' => request('city'),
+            'cuisine_type' => request('cuisine_type'),
+        ]);
+    @endphp
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">
@@ -32,6 +39,16 @@
                    style="padding: 8px 16px; background: #48bb78; color: white; border: none; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
                     <span>+</span> Add Restaurant
                 </a>
+                <div style="display: flex; gap: 6px;">
+                    <a href="{{ route('admin.restaurants.export', array_merge($exportFilters, ['format' => 'xls'])) }}"
+                       style="padding: 8px 14px; background: #1e3a8a; color: white; border-radius: 6px; text-decoration: none; font-size: 13px;">
+                        Export Excel
+                    </a>
+                    <a href="{{ route('admin.restaurants.export', array_merge($exportFilters, ['format' => 'csv'])) }}"
+                       style="padding: 8px 14px; background: #2b6cb0; color: white; border-radius: 6px; text-decoration: none; font-size: 13px;">
+                        Export CSV
+                    </a>
+                </div>
                 
                 <!-- Status Tabs -->
                 <div style="display: flex; gap: 4px; background: #f7fafc; padding: 4px; border-radius: 6px;">
