@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guide;
+use App\Models\GuidePackage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use ZipArchive;
 
 class GuideController extends Controller
@@ -38,9 +42,11 @@ class GuideController extends Controller
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('full_name', 'like', "%{$search}%")
                     ->orWhere('city', 'like', "%{$search}%")
                     ->orWhere('country', 'like', "%{$search}%")
-                    ->orWhere('language', 'like', "%{$search}%");
+                    ->orWhere('language', 'like', "%{$search}%")
+                    ->orWhere('primary_language', 'like', "%{$search}%");
             });
         }
 
@@ -53,13 +59,30 @@ class GuideController extends Controller
         }
 
         if ($request->filled('language')) {
-            $query->where('language', $request->language);
+            $selectedLang = $request->language;
+            $query->where(function ($q) use ($selectedLang) {
+                $q->where('language', $selectedLang)
+                    ->orWhere('primary_language', $selectedLang)
+                    ->orWhereJsonContains('other_languages', $selectedLang);
+            });
         }
 
         $guides = $query->orderBy('created_at', 'desc')->paginate(15);
 
         $cities = Guide::distinct()->whereNotNull('city')->pluck('city')->sort()->values();
-        $languages = Guide::distinct()->whereNotNull('language')->pluck('language')->sort()->values();
+        $languages = Guide::query()
+            ->select('language', 'primary_language')
+            ->get()
+            ->flatMap(function ($g) {
+                $values = [];
+                if (!empty($g->language)) $values[] = $g->language;
+                if (!empty($g->primary_language)) $values[] = $g->primary_language;
+                return $values;
+            })
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
 
         $allCount = Guide::count();
         $activeCount = Guide::where('status', 'active')->count();
@@ -84,30 +107,35 @@ class GuideController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $this->validateGuide($request);
-
-        Guide::create($validated);
+        DB::transaction(function () use ($request) {
+            $validated = $this->validateGuide($request);
+            $guide = Guide::create($validated);
+            $this->syncPackages($guide, $request);
+        });
 
         return redirect()->route('admin.guides.index')->with('success', 'Guide created successfully.');
     }
 
     public function show(string $id)
     {
-        $guide = Guide::findOrFail($id);
+        $guide = Guide::with('packages')->findOrFail($id);
         return view('admin.guides.show', compact('guide'));
     }
 
     public function edit(string $id)
     {
-        $guide = Guide::findOrFail($id);
+        $guide = Guide::with('packages')->findOrFail($id);
         return view('admin.guides.edit', compact('guide'));
     }
 
     public function update(Request $request, string $id)
     {
         $guide = Guide::findOrFail($id);
-        $validated = $this->validateGuide($request);
-        $guide->update($validated);
+        DB::transaction(function () use ($request, $guide) {
+            $validated = $this->validateGuide($request, $guide);
+            $guide->update($validated);
+            $this->syncPackages($guide, $request);
+        });
 
         return redirect()->route('admin.guides.index')->with('success', 'Guide updated successfully.');
     }
@@ -568,25 +596,181 @@ class GuideController extends Controller
         ];
     }
 
-    private function validateGuide(Request $request): array
+    private function validateGuide(Request $request, ?Guide $guide = null): array
     {
-        return $request->validate([
+        $rules = [
             'title' => 'required|string|max:255',
+            'full_name' => 'required|string|max:255',
+            'profile_photo' => 'nullable|image|max:4096',
+            'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
+            'date_of_birth' => 'nullable|date|before:today',
+            'phone_country_code' => 'nullable|string|max:10',
+            'phone_number' => 'nullable|string|max:30',
+            'email' => 'nullable|email|max:255',
+            'whatsapp_number' => 'nullable|string|max:30',
+            'emergency_contact_number' => 'nullable|string|max:30',
+            'nationality' => 'nullable|string|max:80',
+            'years_experience' => 'nullable|integer|min:0|max:80',
+            'short_bio' => 'nullable|string',
             'description' => 'nullable|string',
             'country' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
+            'operating_areas' => 'nullable',
+            'meeting_points' => 'nullable',
+            'dropoff_points' => 'nullable',
             'language' => 'nullable|string|max:100',
+            'primary_language' => 'nullable|string|max:100',
+            'other_languages' => 'nullable',
+            'language_proficiency' => 'nullable|string|max:50',
             'service_date' => 'nullable|date',
+            'available_days' => 'nullable',
+            'available_from_date' => 'nullable|date',
+            'available_to_date' => 'nullable|date|after_or_equal:available_from_date',
             'start_point' => 'nullable|string|max:255',
+            'default_start_location' => 'nullable|string|max:255',
             'end_point' => 'nullable|string|max:255',
+            'default_end_location' => 'nullable|string|max:255',
             'start_time' => 'nullable|date_format:H:i',
+            'daily_start_time' => 'nullable|date_format:H:i',
             'end_time' => 'nullable|date_format:H:i',
+            'daily_end_time' => 'nullable|date_format:H:i',
+            'start_time_slots' => 'nullable',
+            'end_time_auto_calculated' => 'nullable|boolean',
             'duration_hours' => 'nullable|integer|min:1|max:72',
+            'blackout_dates' => 'nullable',
             'price' => 'nullable|numeric|min:0',
-            'status' => 'required|in:active,inactive,pending',
+            'base_price' => 'nullable|numeric|min:0',
+            'peak_season_price' => 'nullable|numeric|min:0',
+            'off_season_price' => 'nullable|numeric|min:0',
+            'weekend_price' => 'nullable|numeric|min:0',
+            'festival_surcharge' => 'nullable|numeric|min:0',
+            'child_discount' => 'nullable|numeric|min:0|max:100',
+            'status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
             'notes' => 'nullable|string',
+            'max_bookings_per_day' => 'nullable|integer|min:1|max:500',
+            'id_proof_type' => 'nullable|string|max:100',
+            'id_proof_number' => 'nullable|string|max:120',
+            'id_proof_upload' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:8192',
+            'license_upload' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:8192',
+            'police_verification' => 'nullable|boolean',
+            'verification_status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
+            'experience_indian_customers' => 'nullable|boolean',
+            'indian_tours_completed' => 'nullable|integer|min:0',
+            'indian_language_support' => 'nullable',
+            'indian_special_notes' => 'nullable|string',
+            'average_rating' => 'nullable|numeric|min:0|max:5',
+            'total_bookings_completed' => 'nullable|integer|min:0',
+            'cancellation_count' => 'nullable|integer|min:0',
+            'customer_feedback' => 'nullable|string',
+            'admin_notes' => 'nullable|string',
+            'display_on_website' => 'nullable|boolean',
+            'featured_guide' => 'nullable|boolean',
+            'profile_priority_order' => 'nullable|integer',
+        ];
+
+        $validated = $request->validate($rules);
+
+        $data = array_merge($validated, [
+            'operating_areas' => $this->normalizeList($request->input('operating_areas')),
+            'meeting_points' => $this->normalizeList($request->input('meeting_points')),
+            'dropoff_points' => $this->normalizeList($request->input('dropoff_points')),
+            'other_languages' => $this->normalizeList($request->input('other_languages')),
+            'available_days' => $this->normalizeList($request->input('available_days')),
+            'blackout_dates' => $this->normalizeList($request->input('blackout_dates')),
+            'start_time_slots' => $this->normalizeList($request->input('start_time_slots')),
+            'indian_language_support' => $this->normalizeList($request->input('indian_language_support')),
+            'end_time_auto_calculated' => $request->boolean('end_time_auto_calculated'),
+            'police_verification' => $request->boolean('police_verification'),
+            'experience_indian_customers' => $request->boolean('experience_indian_customers'),
+            'display_on_website' => $request->boolean('display_on_website', true),
+            'featured_guide' => $request->boolean('featured_guide'),
         ]);
+
+        if (empty($data['language']) && !empty($data['primary_language'])) {
+            $data['language'] = $data['primary_language'];
+        }
+
+        if (!isset($data['created_by'])) {
+            $data['created_by'] = optional(auth('admin')->user())->id;
+        }
+
+        $uploads = $this->handleUploads($request, $guide);
+
+        return array_merge($data, $uploads);
+    }
+
+    private function normalizeList($value): ?array
+    {
+        if (is_array($value)) {
+            $clean = array_values(array_filter(array_map('trim', $value)));
+            return empty($clean) ? null : $clean;
+        }
+
+        if (is_string($value)) {
+            $parts = array_map('trim', explode(',', $value));
+            $clean = array_values(array_filter($parts));
+            return empty($clean) ? null : $clean;
+        }
+
+        return null;
+    }
+
+    private function handleUploads(Request $request, ?Guide $guide = null): array
+    {
+        $uploads = [];
+
+        if ($request->hasFile('profile_photo')) {
+            $uploads['profile_photo'] = $request->file('profile_photo')->store('guides/photos', 'public');
+            if ($guide && $guide->profile_photo) {
+                Storage::disk('public')->delete($guide->profile_photo);
+            }
+        }
+
+        if ($request->hasFile('id_proof_upload')) {
+            $uploads['id_proof_path'] = $request->file('id_proof_upload')->store('guides/documents', 'public');
+            if ($guide && $guide->id_proof_path) {
+                Storage::disk('public')->delete($guide->id_proof_path);
+            }
+        }
+
+        if ($request->hasFile('license_upload')) {
+            $uploads['license_path'] = $request->file('license_upload')->store('guides/documents', 'public');
+            if ($guide && $guide->license_path) {
+                Storage::disk('public')->delete($guide->license_path);
+            }
+        }
+
+        return $uploads;
+    }
+
+    private function syncPackages(Guide $guide, Request $request): void
+    {
+        $packages = $request->input('packages', []);
+        $cleanPackages = collect($packages)
+            ->filter(fn($pkg) => !empty($pkg['service_name']) || !empty($pkg['service_type']))
+            ->map(fn($pkg) => $this->buildPackagePayload($pkg))
+            ->values();
+
+        $guide->packages()->delete();
+
+        foreach ($cleanPackages as $payload) {
+            $guide->packages()->create($payload);
+        }
+    }
+
+    private function buildPackagePayload(array $pkg): array
+    {
+        return [
+            'service_type' => $pkg['service_type'] ?? null,
+            'service_name' => $pkg['service_name'] ?? null,
+            'duration_hours' => isset($pkg['duration_hours']) && $pkg['duration_hours'] !== '' ? (int) $pkg['duration_hours'] : null,
+            'includes_lunch' => !empty($pkg['includes_lunch']),
+            'includes_dinner' => !empty($pkg['includes_dinner']),
+            'description' => $pkg['description'] ?? null,
+            'standard_price' => isset($pkg['standard_price']) && $pkg['standard_price'] !== '' ? (float) $pkg['standard_price'] : null,
+            'extra_hour_price' => isset($pkg['extra_hour_price']) && $pkg['extra_hour_price'] !== '' ? (float) $pkg['extra_hour_price'] : null,
+            'currency' => $pkg['currency'] ?? 'INR',
+            'active' => array_key_exists('active', $pkg) ? (bool) $pkg['active'] : true,
+        ];
     }
 }
-
-

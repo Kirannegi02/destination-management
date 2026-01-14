@@ -151,6 +151,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/settings/smtp', [\App\Http\Controllers\Admin\SettingController::class, 'updateSmtp'])->name('settings.smtp.update');
         Route::post('/settings/firebase', [\App\Http\Controllers\Admin\SettingController::class, 'updateFirebase'])->name('settings.firebase.update');
         Route::post('/settings/razorpay', [\App\Http\Controllers\Admin\SettingController::class, 'updateRazorpay'])->name('settings.razorpay.update');
+        Route::post('/settings/guide-cms', [\App\Http\Controllers\Admin\SettingController::class, 'updateGuideCms'])->name('settings.guide_cms.update');
         
         // Cache management routes
         Route::post('/cache/clear', function () {

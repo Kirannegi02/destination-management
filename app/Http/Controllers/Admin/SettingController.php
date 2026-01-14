@@ -47,7 +47,16 @@ class SettingController extends Controller
             'razorpay_enabled' => Setting::get('razorpay_enabled', '0'), // 0 or 1
         ];
 
-        return view('admin.settings.index', compact('smtpSettings', 'firebaseSettings', 'razorpaySettings'));
+        // Guide CMS counters/settings
+        $guideCmsSettings = [
+            'operating_countries_text' => Setting::get('guide_cms_operating_countries_text', 'Operating in 70+ Countries'),
+            'indian_customers_text' => Setting::get('guide_cms_indian_customers_text', 'Experienced in Serving Indian Customers'),
+            'years_experience' => Setting::get('guide_cms_years_experience', '10+'),
+            'total_guides_count' => Setting::get('guide_cms_total_guides_count', '500+'),
+            'trust_badges' => Setting::get('guide_cms_trust_badges', []),
+        ];
+
+        return view('admin.settings.index', compact('smtpSettings', 'firebaseSettings', 'razorpaySettings', 'guideCmsSettings'));
     }
 
     /**
@@ -174,6 +183,30 @@ class SettingController extends Controller
 
         return redirect()->route('admin.settings.index')
             ->with('success', 'Razorpay payment settings updated successfully.');
+    }
+
+    /**
+     * Update guide CMS counters/settings.
+     */
+    public function updateGuideCms(Request $request)
+    {
+        $validated = Validator::make($request->all(), [
+            'operating_countries_text' => 'required|string|max:255',
+            'indian_customers_text' => 'required|string|max:255',
+            'years_experience' => 'required|string|max:50',
+            'total_guides_count' => 'required|string|max:50',
+            'trust_badges' => 'nullable|array',
+            'trust_badges.*' => 'nullable|string|max:255',
+        ])->validate();
+
+        Setting::set('guide_cms_operating_countries_text', $validated['operating_countries_text']);
+        Setting::set('guide_cms_indian_customers_text', $validated['indian_customers_text']);
+        Setting::set('guide_cms_years_experience', $validated['years_experience']);
+        Setting::set('guide_cms_total_guides_count', $validated['total_guides_count']);
+        Setting::set('guide_cms_trust_badges', $validated['trust_badges'] ?? [], 'json');
+
+        return redirect()->route('admin.settings.index')
+            ->with('success', 'Guide CMS settings updated successfully.');
     }
 
     /**

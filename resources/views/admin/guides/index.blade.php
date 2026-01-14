@@ -10,7 +10,7 @@
         .status-tab--inactive { color:#4a5568; }
     </style>
     <div class="card">
-        <div class="card-header">
+        <div class="card-header">]
             <h2 class="card-title">
                 Guides
                 <span style="font-size: 14px; font-weight: normal; color: #718096;">
@@ -57,7 +57,7 @@
             <form action="{{ route('admin.guides.index') }}" method="GET" style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
                 <div style="flex:1; min-width:200px;">
                     <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:600; color:#4a5568;">Search</label>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search guide title, city, language"
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name, city, language"
                            style="width:100%; padding:8px 12px; border:2px solid #e2e8f0; border-radius:6px; font-size:14px;">
                 </div>
                 <div style="flex:1; min-width:150px;">
@@ -98,11 +98,11 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Title</th>
+                        <th>Guide</th>
                         <th>City / Country</th>
-                        <th>Language</th>
-                        <th>Service Date</th>
-                        <th>Duration</th>
+                        <th>Languages</th>
+                        <th>Availability</th>
+                        <th>Price</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -112,9 +112,12 @@
                         <tr>
                             <td>{{ $guide->id }}</td>
                             <td>
-                                <strong>{{ $guide->title }}</strong>
-                                @if($guide->price)
-                                    <br><small style="color:#667eea;">₹{{ number_format($guide->price, 2) }}</small>
+                                <strong>{{ $guide->full_name ?? $guide->title }}</strong>
+                                @if($guide->title)
+                                    <br><small style="color:#4a5568;">{{ $guide->title }}</small>
+                                @endif
+                                @if($guide->years_experience)
+                                    <br><small style="color:#667eea;">{{ $guide->years_experience }} yrs exp.</small>
                                 @endif
                             </td>
                             <td>
@@ -123,11 +126,19 @@
                                     , {{ $guide->country }}
                                 @endif
                             </td>
-                            <td>{{ $guide->language ?? 'N/A' }}</td>
-                            <td>{{ $guide->service_date ? $guide->service_date->format('d M Y') : 'Flexible' }}</td>
+                            <td>{{ $guide->primary_language ?? $guide->language ?? 'N/A' }}</td>
                             <td>
-                                @if($guide->duration_hours)
-                                    {{ $guide->duration_hours }} hrs
+                                @if($guide->available_from_date || $guide->available_to_date)
+                                    {{ optional($guide->available_from_date)->format('d M Y') ?? '—' }} - {{ optional($guide->available_to_date)->format('d M Y') ?? '—' }}
+                                @else
+                                    Flexible
+                                @endif
+                            </td>
+                            <td>
+                                @if($guide->price)
+                                    ₹{{ number_format($guide->price, 2) }}
+                                @elseif($guide->base_price)
+                                    ₹{{ number_format($guide->base_price, 2) }}
                                 @else
                                     —
                                 @endif

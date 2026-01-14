@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\OtpController;
+use App\Http\Controllers\Api\GuideBookingController;
+use App\Http\Controllers\Api\GuideController as ApiGuideController;
 use Illuminate\Support\Facades\Route;
 
 // Load JWT stubs if the package is not installed
@@ -50,6 +52,17 @@ Route::middleware('auth:api')->group(function () {
         
         // Get single restaurant by ID
         Route::get('/{id}', [\App\Http\Controllers\Api\RestaurantController::class, 'show']);
+    });
+
+    // Guides and guide booking APIs
+    Route::prefix('guides')->group(function () {
+        Route::get('/', [ApiGuideController::class, 'index']);
+        Route::get('/{id}', [ApiGuideController::class, 'show']);
+    });
+    Route::prefix('guide-bookings')->group(function () {
+        Route::get('/', [GuideBookingController::class, 'index']);
+        Route::post('/', [GuideBookingController::class, 'store']);
+        Route::post('/{id}/cancel', [GuideBookingController::class, 'cancel']);
     });
     
     // Bookings (no payment)

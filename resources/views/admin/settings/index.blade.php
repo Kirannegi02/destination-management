@@ -162,14 +162,17 @@
     <div class="settings-container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <div class="settings-tabs" style="flex: 1;">
-                <button class="tab-button active" onclick="switchTab('smtp')">
+                <button class="tab-button active" onclick="switchTab(event, 'smtp')">
                     📧 SMTP Settings
                 </button>
-                <button class="tab-button" onclick="switchTab('firebase')">
+                <button class="tab-button" onclick="switchTab(event, 'firebase')">
                     🔥 Firebase Settings
                 </button>
-                <button class="tab-button" onclick="switchTab('razorpay')">
+                <button class="tab-button" onclick="switchTab(event, 'razorpay')">
                     💳 Payment Configurations
+                </button>
+                <button class="tab-button" onclick="switchTab(event, 'guide-cms')">
+                    🌍 Guide CMS
                 </button>
             </div>
             <div style="margin-left: 20px;">
@@ -536,26 +539,94 @@
                 </form>
             </div>
         </div>
+
+        <!-- Guide CMS Settings Tab -->
+        <div id="guide-cms-tab" class="tab-content">
+            <div class="settings-form">
+                <div class="info-box">
+                    <strong>Guide CMS Counters</strong>
+                    <p>Manage the top-of-page guide highlights: operating countries, Indian customer experience, years of experience, total guides, and trust badges/icons.</p>
+                </div>
+                <form action="{{ route('admin.settings.guide_cms.update') }}" method="POST">
+                    @csrf
+                    <div class="form-section">
+                        <h3 class="form-section-title">Headline Counters</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Operating in X Countries <span class="required">*</span></label>
+                                <input type="text" name="operating_countries_text" value="{{ old('operating_countries_text', $guideCmsSettings['operating_countries_text']) }}" required>
+                                <div class="form-help">Example: Operating in 70+ Countries</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Indian Customers Statement <span class="required">*</span></label>
+                                <input type="text" name="indian_customers_text" value="{{ old('indian_customers_text', $guideCmsSettings['indian_customers_text']) }}" required>
+                                <div class="form-help">Example: Experienced in Serving Indian Customers</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Years of Company Experience <span class="required">*</span></label>
+                                <input type="text" name="years_experience" value="{{ old('years_experience', $guideCmsSettings['years_experience']) }}" required>
+                                <div class="form-help">Example: 15+ Years</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Total Guides Count <span class="required">*</span></label>
+                                <input type="text" name="total_guides_count" value="{{ old('total_guides_count', $guideCmsSettings['total_guides_count']) }}" required>
+                                <div class="form-help">Example: 1200+ Expert Guides</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="form-section-title">Trust Badges / Icons</h3>
+                        <p class="form-help" style="margin-bottom:10px;">Add short badge labels (e.g., Verified, Police Checked, Multilingual). You can add more rows as needed.</p>
+                        <div id="trust-badges" class="form-grid">
+                            @php $badges = old('trust_badges', $guideCmsSettings['trust_badges'] ?? []); @endphp
+                            @forelse($badges as $idx => $badge)
+                                <div class="form-group">
+                                    <label>Badge {{ $idx+1 }}</label>
+                                    <input type="text" name="trust_badges[]" value="{{ $badge }}" placeholder="Verified Guides">
+                                </div>
+                            @empty
+                                <div class="form-group">
+                                    <label>Badge 1</label>
+                                    <input type="text" name="trust_badges[]" placeholder="Verified Guides">
+                                </div>
+                            @endforelse
+                        </div>
+                        <button type="button" onclick="addBadge()" style="margin-top:10px; background:#e2e8f0; color:#2d3748; padding:8px 14px; border:none; border-radius:6px; cursor:pointer;">+ Add Badge</button>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <button type="submit" class="btn-save">Save Guide CMS Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script>
-        function switchTab(tab) {
-            // Hide all tabs
+        function switchTab(evt, tab) {
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            
-            // Remove active class from all buttons
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('active');
             });
-            
-            // Show selected tab
             document.getElementById(tab + '-tab').classList.add('active');
-            
-            // Add active class to clicked button
-            event.target.classList.add('active');
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.add('active');
+            }
+        }
+
+        function addBadge() {
+            const container = document.getElementById('trust-badges');
+            const count = container.querySelectorAll('.form-group').length + 1;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'form-group';
+            wrapper.innerHTML = `
+                <label>Badge ${count}</label>
+                <input type="text" name="trust_badges[]" placeholder="Trusted by 1M+ Travelers">
+            `;
+            container.appendChild(wrapper);
         }
     </script>
 @endsection
-
