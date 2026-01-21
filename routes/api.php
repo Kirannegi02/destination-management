@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\GuideBookingController;
 use App\Http\Controllers\Api\GuideController as ApiGuideController;
+use App\Http\Controllers\Api\MealController;
 use Illuminate\Support\Facades\Route;
 
 // Load JWT stubs if the package is not installed
@@ -58,6 +59,11 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('guides')->group(function () {
         Route::get('/', [ApiGuideController::class, 'index']);
         Route::get('/{id}', [ApiGuideController::class, 'show']);
+    });
+    
+    // Meals API routes
+    Route::prefix('meals')->group(function () {
+        Route::get('/', [MealController::class, 'index']);
     });
     Route::prefix('guide-bookings')->group(function () {
         Route::get('/', [GuideBookingController::class, 'index']);

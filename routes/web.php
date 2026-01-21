@@ -134,6 +134,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/guides', [\App\Http\Controllers\Admin\GuideController::class, 'index'])->name('guides.index');
         Route::get('/guides/{guide}', [\App\Http\Controllers\Admin\GuideController::class, 'show'])->name('guides.show');
 
+        // Guide bookings (listing only)
+        Route::get('/guide-bookings', [\App\Http\Controllers\Admin\GuideBookingController::class, 'index'])->name('guide_bookings.index');
+
         // Meal routes
         Route::resource('meals', \App\Http\Controllers\Admin\MealController::class);
         Route::get('/meals', [\App\Http\Controllers\Admin\MealController::class, 'index'])->name('meals.index');

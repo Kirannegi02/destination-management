@@ -380,6 +380,12 @@
                 <a href="{{ route('admin.bookings.index') }}" class="menu-item {{ $isBookingsActive ? 'active' : '' }}">
                     📋 Bookings
                 </a>
+                @php
+                    $isGuideBookingsActive = request()->routeIs('admin.guide_bookings.*');
+                @endphp
+                <a href="{{ route('admin.guide_bookings.index') }}" class="menu-item {{ $isGuideBookingsActive ? 'active' : '' }}">
+                    🧭 Guide Bookings
+                </a>
                 
                 @php
                     $isGuidesActive = request()->routeIs('admin.guides.*');
