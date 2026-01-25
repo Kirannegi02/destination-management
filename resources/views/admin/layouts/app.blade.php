@@ -416,6 +416,36 @@
                 </div>
                 
                 @php
+                    $isSightseeingActive = request()->routeIs('admin.sightseeings.*');
+                    $sightseeingCreateActive = request()->routeIs('admin.sightseeings.create');
+                    $sightseeingIndexActive = request()->routeIs('admin.sightseeings.index');
+                @endphp
+                <div class="menu-item has-submenu {{ $isSightseeingActive ? 'active' : '' }}" 
+                     onclick="toggleSubmenu(this)" 
+                     style="cursor: pointer;">
+                    🏔️ Sightseeings
+                    <span class="submenu-arrow" style="float: right; margin-top: 2px;">{{ $isSightseeingActive ? '▼' : '▶' }}</span>
+                </div>
+                <div class="submenu {{ $isSightseeingActive ? 'expanded' : '' }}">
+                    <a href="{{ route('admin.sightseeings.create') }}" 
+                       class="submenu-item {{ $sightseeingCreateActive ? 'active' : '' }}">
+                        ➕ Add Sightseeing
+                    </a>
+                    <a href="{{ route('admin.sightseeings.index') }}" 
+                       class="submenu-item {{ $sightseeingIndexActive ? 'active' : '' }}">
+                        📋 All Sightseeings
+                    </a>
+                    <a href="{{ route('admin.sightseeings.import.form') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.sightseeings.import*') ? 'active' : '' }}">
+                        ⬆️ Bulk Import
+                    </a>
+                    <a href="{{ route('admin.sightseeings.export.page') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.sightseeings.export*') ? 'active' : '' }}">
+                        ⬇️ Bulk Export
+                    </a>
+                </div>
+                
+                @php
                     $restaurantMenuActive = request()->routeIs('admin.restaurants.*');
                     $restaurantCreateActive = request()->routeIs('admin.restaurants.create');
                     $restaurantIndexActive = request()->routeIs('admin.restaurants.index');

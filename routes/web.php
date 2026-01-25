@@ -134,6 +134,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/guides', [\App\Http\Controllers\Admin\GuideController::class, 'index'])->name('guides.index');
         Route::get('/guides/{guide}', [\App\Http\Controllers\Admin\GuideController::class, 'show'])->name('guides.show');
 
+        // Sightseeing routes
+        Route::resource('sightseeings', \App\Http\Controllers\Admin\SightseeingController::class)
+            ->whereNumber('sightseeing');
+        Route::get('/sightseeings', [\App\Http\Controllers\Admin\SightseeingController::class, 'index'])->name('sightseeings.index');
+        Route::get('/sightseeings/{sightseeing}', [\App\Http\Controllers\Admin\SightseeingController::class, 'show'])
+            ->whereNumber('sightseeing')
+            ->name('sightseeings.show');
+        Route::prefix('sightseeings')->name('sightseeings.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\Admin\SightseeingController::class, 'export'])->name('export');
+            Route::get('/export/page', [\App\Http\Controllers\Admin\SightseeingController::class, 'exportPage'])->name('export.page');
+            Route::get('/import', [\App\Http\Controllers\Admin\SightseeingController::class, 'importForm'])->name('import.form');
+            Route::post('/import', [\App\Http\Controllers\Admin\SightseeingController::class, 'import'])->name('import');
+            Route::get('/import/sample', [\App\Http\Controllers\Admin\SightseeingController::class, 'sample'])->name('import.sample');
+        });
+
         // Guide bookings (listing only)
         Route::get('/guide-bookings', [\App\Http\Controllers\Admin\GuideBookingController::class, 'index'])->name('guide_bookings.index');
 

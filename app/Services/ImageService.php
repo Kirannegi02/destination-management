@@ -185,11 +185,19 @@ class ImageService
             return null;
         }
 
-        // Remove 'public/' prefix if present
-        $path = str_replace('public/', '', $path);
+        // If already a full URL, return as-is
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // Remove common prefixes that may be stored in DB
+        // - public/ : comes from Storage paths
+        // - storage/ : comes from Storage::url() outputs
+        $path = str_replace(['public/', 'storage/'], '', $path);
+        $path = ltrim($path, '/');
 
         // Generate URL using APP_URL
-        $baseUrl = rtrim(config('app.url'), '/');
+        $baseUrl = rtrim(config('app.url') ?: request()->getSchemeAndHttpHost(), '/');
         
         // Split path into segments
         $pathParts = explode('/', $path);
