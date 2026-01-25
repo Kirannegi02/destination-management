@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\GuideBookingController;
 use App\Http\Controllers\Api\GuideController as ApiGuideController;
+use App\Http\Controllers\Api\SightseeingController as ApiSightseeingController;
 use App\Http\Controllers\Api\MealController;
 use Illuminate\Support\Facades\Route;
 
@@ -59,6 +60,12 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('guides')->group(function () {
         Route::get('/', [ApiGuideController::class, 'index']);
         Route::get('/{id}', [ApiGuideController::class, 'show']);
+    });
+
+    // Sightseeing APIs
+    Route::prefix('sightseeings')->group(function () {
+        Route::get('/', [ApiSightseeingController::class, 'index']);
+        Route::get('/{id}', [ApiSightseeingController::class, 'show']);
     });
     
     // Meals API routes
