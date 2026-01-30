@@ -22,8 +22,10 @@
                 Export CSV
             </a>
         </div>
-
-        <p style="color:#718096; font-size:13px;">Filters (status/city/country) from the listing page can be appended as query params if needed, e.g. <code>?status=active&city=Zurich</code>.</p>
     </div>
 @endsection
 
+<!-- in below api
+{{local_url}}/api/restaurants?search=Italian&status=ac
+
+add number of rooms, locatrion in search api  -->

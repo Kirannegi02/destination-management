@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Guide;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
@@ -163,11 +164,17 @@ class GuideController extends Controller
 
     private function transformGuide(Guide $guide, bool $includeNotes = false): array
     {
+        $profilePhotoUrl = null;
+        if ($guide->profile_photo) {
+            // API contract: return absolute URL under storage/app/public/guides/photos
+            $profilePhotoUrl = url('storage/app/public/' . ltrim($guide->profile_photo, '/'));
+        }
+
         return [
             'id' => $guide->id,
             'title' => $guide->title,
             'full_name' => $guide->full_name,
-            'profile_photo_url' => $guide->profile_photo ? asset('storage/' . $guide->profile_photo) : null,
+            'profile_photo_url' => $profilePhotoUrl,
             'city' => $guide->city,
             'country' => $guide->country,
             'operating_areas' => $guide->operating_areas,
