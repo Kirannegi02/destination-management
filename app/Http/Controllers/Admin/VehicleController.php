@@ -15,10 +15,8 @@ class VehicleController extends Controller
         'name',
         'capacity_seats',
         'description',
-        'default_price_per_km',
         'currency',
         'status',
-        'sort_order',
     ];
 
     public function index(Request $request)
@@ -37,7 +35,7 @@ class VehicleController extends Controller
             $query->where('status', $request->status);
         }
 
-        $vehicles = $query->orderBy('sort_order')->orderBy('name')->paginate(15);
+        $vehicles = $query->orderBy('name')->paginate(15);
 
         $allCount = Vehicle::count();
         $activeCount = Vehicle::where('status', 'active')->count();
@@ -144,10 +142,8 @@ class VehicleController extends Controller
                 'name' => 'required|string|max:255',
                 'capacity_seats' => 'nullable|integer|min:1|max:100',
                 'description' => 'nullable|string',
-                'default_price_per_km' => 'nullable|numeric|min:0',
                 'currency' => 'nullable|string|max:10',
                 'status' => 'required|in:active,inactive,pending',
-                'sort_order' => 'nullable|integer|min:0',
             ]);
 
             if ($validator->fails()) {
@@ -187,7 +183,7 @@ class VehicleController extends Controller
             $query->where('status', $request->status);
         }
 
-        $vehicles = $query->orderBy('sort_order')->orderBy('name')->get();
+        $vehicles = $query->orderBy('name')->get();
         $rows = $this->buildExportRows($vehicles);
 
         $filename = 'vehicles-' . now()->format('Ymd-His') . ($format === 'csv' ? '.csv' : '.xls');
@@ -239,10 +235,8 @@ class VehicleController extends Controller
             'name' => 'required|string|max:255',
             'capacity_seats' => 'nullable|integer|min:1|max:100',
             'description' => 'nullable|string',
-            'default_price_per_km' => 'nullable|numeric|min:0',
             'currency' => 'nullable|string|max:10',
             'status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
-            'sort_order' => 'nullable|integer|min:0',
         ]);
     }
 
@@ -386,9 +380,6 @@ class VehicleController extends Controller
         if (empty($payload['currency'])) {
             $payload['currency'] = 'INR';
         }
-        if (!isset($payload['sort_order']) || $payload['sort_order'] === null) {
-            $payload['sort_order'] = 0;
-        }
         return $payload;
     }
 
@@ -397,9 +388,6 @@ class VehicleController extends Controller
         if ($value === null || (is_string($value) && trim($value) === '')) {
             if ($column === 'status') {
                 return 'pending';
-            }
-            if ($column === 'sort_order') {
-                return 0;
             }
             return null;
         }
@@ -410,10 +398,7 @@ class VehicleController extends Controller
             $value = strtolower((string) $value);
             return in_array($value, ['active', 'inactive', 'pending'], true) ? $value : 'pending';
         }
-        if (in_array($column, ['default_price_per_km'], true)) {
-            return is_numeric($value) ? (float) $value : null;
-        }
-        if (in_array($column, ['capacity_seats', 'sort_order'], true)) {
+        if ($column === 'capacity_seats') {
             return is_numeric($value) ? (int) $value : 0;
         }
         return $value;
@@ -433,10 +418,8 @@ class VehicleController extends Controller
                 $v->name,
                 $v->capacity_seats,
                 $v->description,
-                $v->default_price_per_km,
                 $v->currency ?? 'INR',
                 $v->status,
-                $v->sort_order,
             ];
         }
         return $rows;

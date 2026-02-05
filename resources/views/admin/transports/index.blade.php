@@ -46,7 +46,7 @@
             <form action="{{ route('admin.transports.index') }}" method="GET" style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
                 <div style="flex:1; min-width:200px;">
                     <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:600; color:#4a5568;">Search</label>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="From/To location, notes"
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Location, notes"
                            style="width:100%; padding:8px 12px; border:2px solid #e2e8f0; border-radius:6px; font-size:14px;">
                 </div>
                 <div style="flex:1; min-width:180px;">
@@ -74,7 +74,7 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>From / To</th>
+                        <th>Location</th>
                         <th>Vehicle</th>
                         <th>Price/km</th>
                         <th>Min charge</th>
@@ -86,9 +86,9 @@
                     @foreach($transports as $t)
                         <tr>
                             <td>{{ $t->id }}</td>
-                            <td>{{ $t->from_location ?? '—' }} to {{ $t->to_location ?? '—' }}</td>
+                            <td>{{ $t->location ?? '—' }}</td>
                             <td>{{ $t->vehicle ? $t->vehicle->name : 'N/A' }}</td>
-                            <td>{{ $t->currency ?? 'INR' }} {{ number_format($t->price_per_km, 2) }}</td>
+                            <td>{{ number_format($t->price_per_km, 2) }}</td>
                             <td>{{ $t->min_charge ? number_format($t->min_charge, 2) : '—' }}</td>
                             <td>
                                 @if($t->status === 'active')

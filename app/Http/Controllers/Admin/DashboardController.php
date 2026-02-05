@@ -18,7 +18,7 @@ class DashboardController extends Controller
         $stats = [
             // Restaurants
             'total_restaurants' => $this->safeCount('restaurants'),
-            'active_restaurants' => $this->safeCount('res8+taurants', ['status' => 'active']),
+            'active_restaurants' => $this->safeCount('restaurants', ['status' => 'active']),
             'inactive_restaurants' => $this->safeCount('restaurants', ['status' => 'inactive']),
             'pending_restaurants' => $this->safeCount('restaurants', ['status' => 'pending']),
 

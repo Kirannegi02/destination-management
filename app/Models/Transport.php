@@ -10,12 +10,10 @@ class Transport extends Model
     use HasFactory;
 
     protected $fillable = [
-        'from_location',
-        'to_location',
+        'location',
         'vehicle_id',
         'price_per_km',
         'min_charge',
-        'currency',
         'notes',
         'status',
     ];

@@ -32,14 +32,13 @@
     </div>
     @if($vehicles->count()>0)
     <table class="table">
-        <thead><tr><th>ID</th><th>Name</th><th>Capacity</th><th>Default price/km</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
         @foreach($vehicles as $v)
         <tr>
             <td>{{ $v->id }}</td>
             <td><strong>{{ $v->name }}</strong></td>
             <td>{{ $v->capacity_seats ?? '—' }}</td>
-            <td>{{ $v->default_price_per_km ? number_format($v->default_price_per_km,2) : '—' }}</td>
             <td>@if($v->status==='active')<span class="badge badge-success">Active</span>@elseif($v->status==='inactive')<span class="badge badge-danger">Inactive</span>@else<span class="badge" style="background:#fbbf24;color:white;">Pending</span>@endif</td>
             <td>
                 <a href="{{ route('admin.vehicles.show',$v->id) }}" style="padding:6px 12px;background:#48bb78;color:white;border-radius:6px;text-decoration:none;font-size:12px;">View</a>

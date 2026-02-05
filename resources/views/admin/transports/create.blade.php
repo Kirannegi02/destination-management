@@ -16,12 +16,8 @@
     <form action="{{ route('admin.transports.store') }}" method="POST" style="padding:20px;">
         @csrf
         <div style="margin-bottom:20px;">
-            <label>From Location</label>
-            <input type="text" name="from_location" value="{{ old('from_location') }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
-        </div>
-        <div style="margin-bottom:20px;">
-            <label>To Location</label>
-            <input type="text" name="to_location" value="{{ old('to_location') }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
+            <label>Location (e.g. city, country)</label>
+            <input type="text" name="location" value="{{ old('location') }}" placeholder="e.g. Delhi, India" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
         </div>
         <div style="margin-bottom:20px;">
             <label>Vehicle (required)</label>
@@ -42,10 +38,6 @@
         <div style="margin-bottom:20px;">
             <label>Minimum charge</label>
             <input type="number" name="min_charge" value="{{ old('min_charge') }}" step="0.01" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
-        </div>
-        <div style="margin-bottom:20px;">
-            <label>Currency</label>
-            <input type="text" name="currency" value="{{ old('currency', 'INR') }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
         </div>
         <div style="margin-bottom:20px;">
             <label>Notes</label>

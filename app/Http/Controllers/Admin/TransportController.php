@@ -13,12 +13,10 @@ use ZipArchive;
 class TransportController extends Controller
 {
     private array $importableColumns = [
-        'from_location',
-        'to_location',
+        'location',
         'vehicle_id',
         'price_per_km',
         'min_charge',
-        'currency',
         'notes',
         'status',
     ];
@@ -30,8 +28,7 @@ class TransportController extends Controller
         if ($request->filled('search')) {
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
-                $q->where('from_location', 'like', "%{$search}%")
-                    ->orWhere('to_location', 'like', "%{$search}%")
+                $q->where('location', 'like', "%{$search}%")
                     ->orWhere('notes', 'like', "%{$search}%");
             });
         }
@@ -45,7 +42,7 @@ class TransportController extends Controller
         }
 
         $transports = $query->orderBy('created_at', 'desc')->paginate(15);
-        $vehicles = Vehicle::orderBy('sort_order')->orderBy('name')->get();
+        $vehicles = Vehicle::orderBy('name')->get();
 
         $allCount = Transport::count();
         $activeCount = Transport::where('status', 'active')->count();
@@ -64,7 +61,7 @@ class TransportController extends Controller
 
     public function create()
     {
-        $vehicles = Vehicle::where('status', 'active')->orderBy('sort_order')->orderBy('name')->get();
+        $vehicles = Vehicle::where('status', 'active')->orderBy('name')->get();
         return view('admin.transports.create', compact('vehicles'));
     }
 
@@ -84,7 +81,7 @@ class TransportController extends Controller
     public function edit(string $id)
     {
         $transport = Transport::findOrFail($id);
-        $vehicles = Vehicle::where('status', 'active')->orderBy('sort_order')->orderBy('name')->get();
+        $vehicles = Vehicle::where('status', 'active')->orderBy('name')->get();
         return view('admin.transports.edit', compact('transport', 'vehicles'));
     }
 
@@ -152,12 +149,10 @@ class TransportController extends Controller
             $payload = $this->sanitizeImportPayload($assoc);
 
             $validator = Validator::make($payload, [
-                'from_location' => 'nullable|string|max:255',
-                'to_location' => 'nullable|string|max:255',
+                'location' => 'nullable|string|max:255',
                 'vehicle_id' => 'required|exists:vehicles,id',
                 'price_per_km' => 'required|numeric|min:0',
                 'min_charge' => 'nullable|numeric|min:0',
-                'currency' => 'nullable|string|max:10',
                 'notes' => 'nullable|string',
                 'status' => 'required|in:active,inactive,pending',
             ]);
@@ -169,8 +164,7 @@ class TransportController extends Controller
             }
 
             $match = [
-                'from_location' => $payload['from_location'] ?? null,
-                'to_location' => $payload['to_location'] ?? null,
+                'location' => $payload['location'] ?? null,
                 'vehicle_id' => $payload['vehicle_id'],
             ];
             $transport = Transport::updateOrCreate($match, $payload);
@@ -254,12 +248,10 @@ class TransportController extends Controller
     private function validateTransport(Request $request): array
     {
         return $request->validate([
-            'from_location' => 'nullable|string|max:255',
-            'to_location' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
             'vehicle_id' => 'required|exists:vehicles,id',
             'price_per_km' => 'required|numeric|min:0',
             'min_charge' => 'nullable|numeric|min:0',
-            'currency' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
             'status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
         ]);
@@ -402,9 +394,6 @@ class TransportController extends Controller
         if (empty($payload['status'])) {
             $payload['status'] = 'pending';
         }
-        if (empty($payload['currency'])) {
-            $payload['currency'] = 'INR';
-        }
         return $payload;
     }
 
@@ -437,16 +426,14 @@ class TransportController extends Controller
 
     private function buildExportRows($transports): array
     {
-        $rows = [['from_location', 'to_location', 'vehicle_id', 'vehicle_name', 'price_per_km', 'min_charge', 'currency', 'notes', 'status']];
+        $rows = [['location', 'vehicle_id', 'vehicle_name', 'price_per_km', 'min_charge', 'notes', 'status']];
         foreach ($transports as $t) {
             $rows[] = [
-                $t->from_location,
-                $t->to_location,
+                $t->location,
                 $t->vehicle_id,
                 $t->vehicle ? $t->vehicle->name : '',
                 $t->price_per_km,
                 $t->min_charge,
-                $t->currency ?? 'INR',
                 $t->notes,
                 $t->status,
             ];
@@ -478,12 +465,10 @@ class TransportController extends Controller
         return [
             $this->importableColumns,
             [
-                'Delhi',
-                'Agra',
+                'Delhi, India',
                 $vehicleId,
                 25.00,
                 500,
-                'INR',
                 'One-way rate',
                 'active',
             ],

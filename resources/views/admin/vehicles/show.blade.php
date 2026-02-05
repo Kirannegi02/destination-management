@@ -9,7 +9,6 @@
     </div>
     <div style="padding:20px;">
         <p><strong>Capacity:</strong> {{ $vehicle->capacity_seats ?? 'N/A' }} seats</p>
-        <p><strong>Default price per km:</strong> {{ $vehicle->default_price_per_km ? number_format($vehicle->default_price_per_km,2) : 'N/A' }} {{ $vehicle->currency ?? 'INR' }}</p>
         @if($vehicle->description)<p><strong>Description:</strong> {{ $vehicle->description }}</p>@endif
         <p><strong>Transport routes:</strong> {{ $vehicle->transports->count() }}</p>
     </div>

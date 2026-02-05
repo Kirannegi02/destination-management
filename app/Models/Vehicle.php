@@ -13,14 +13,8 @@ class Vehicle extends Model
         'name',
         'capacity_seats',
         'description',
-        'default_price_per_km',
         'currency',
         'status',
-        'sort_order',
-    ];
-
-    protected $casts = [
-        'default_price_per_km' => 'decimal:2',
     ];
 
     public function transports()

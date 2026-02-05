@@ -502,22 +502,6 @@
                     <span class="submenu-arrow" style="float: right; margin-top: 2px;">{{ $isTransportActive ? '▼' : '▶' }}</span>
                 </div>
                 <div class="submenu submenu--large {{ $isTransportActive ? 'expanded' : '' }}">
-                    <a href="{{ route('admin.transports.create') }}" 
-                       class="submenu-item {{ $transportCreateActive ? 'active' : '' }}">
-                        ➕ Add Transport
-                    </a>
-                    <a href="{{ route('admin.transports.index') }}" 
-                       class="submenu-item {{ $transportIndexActive ? 'active' : '' }}">
-                        📋 All Transports
-                    </a>
-                    <a href="{{ route('admin.transports.import.form') }}" 
-                       class="submenu-item {{ request()->routeIs('admin.transports.import*') ? 'active' : '' }}">
-                        ⬆️ Transport Import
-                    </a>
-                    <a href="{{ route('admin.transports.export.page') }}" 
-                       class="submenu-item {{ request()->routeIs('admin.transports.export*') ? 'active' : '' }}">
-                        ⬇️ Transport Export
-                    </a>
                     <a href="{{ route('admin.vehicles.create') }}" 
                        class="submenu-item {{ $vehicleCreateActive ? 'active' : '' }}">
                         ➕ Add Vehicle
@@ -533,6 +517,22 @@
                     <a href="{{ route('admin.vehicles.export.page') }}" 
                        class="submenu-item {{ request()->routeIs('admin.vehicles.export*') ? 'active' : '' }}">
                         ⬇️ Vehicle Export
+                    </a>
+                    <a href="{{ route('admin.transports.create') }}" 
+                       class="submenu-item {{ $transportCreateActive ? 'active' : '' }}">
+                        ➕ Add Transport
+                    </a>
+                    <a href="{{ route('admin.transports.index') }}" 
+                       class="submenu-item {{ $transportIndexActive ? 'active' : '' }}">
+                        📋 All Transports
+                    </a>
+                    <a href="{{ route('admin.transports.import.form') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.transports.import*') ? 'active' : '' }}">
+                        ⬆️ Transport Import
+                    </a>
+                    <a href="{{ route('admin.transports.export.page') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.transports.export*') ? 'active' : '' }}">
+                        ⬇️ Transport Export
                     </a>
                 </div>
 
