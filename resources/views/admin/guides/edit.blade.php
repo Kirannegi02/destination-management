@@ -44,7 +44,7 @@
                         <label style="display:block; margin-bottom:8px; font-weight:600; color:#2d3748;">Profile Photo</label>
                         <input type="file" name="profile_photo" accept="image/*" style="width:100%; padding:8px; border:2px solid #e2e8f0; border-radius:8px;">
                         @if($guide->profile_photo)
-                            <small style="display:block; margin-top:6px;">Current: <a href="{{ asset('storage/'.$guide->profile_photo) }}" target="_blank">View</a></small>
+                            <small style="display:block; margin-top:6px;">Current: <a href="{{ url('storage/app/public/' . ltrim($guide->profile_photo, '/')) }}" target="_blank">View</a></small>
                         @endif
                     </div>
                     <div>
@@ -205,14 +205,14 @@
                         <label style="display:block; margin-bottom:6px; font-weight:600;">ID Proof Upload</label>
                         <input type="file" name="id_proof_upload" accept=".jpg,.jpeg,.png,.pdf" style="width:100%; padding:8px; border:2px solid #e2e8f0; border-radius:8px;">
                         @if($guide->id_proof_path)
-                            <small style="display:block; margin-top:6px;">Current: <a href="{{ asset('storage/'.$guide->id_proof_path) }}" target="_blank">View</a></small>
+                            <small style="display:block; margin-top:6px;">Current: <a href="{{ url('storage/app/public/' . ltrim($guide->id_proof_path, '/')) }}" target="_blank">View</a></small>
                         @endif
                     </div>
                     <div>
                         <label style="display:block; margin-bottom:6px; font-weight:600;">Guide License / Certification</label>
                         <input type="file" name="license_upload" accept=".jpg,.jpeg,.png,.pdf" style="width:100%; padding:8px; border:2px solid #e2e8f0; border-radius:8px;">
                         @if($guide->license_path)
-                            <small style="display:block; margin-top:6px;">Current: <a href="{{ asset('storage/'.$guide->license_path) }}" target="_blank">View</a></small>
+                            <small style="display:block; margin-top:6px;">Current: <a href="{{ url('storage/app/public/' . ltrim($guide->license_path, '/')) }}" target="_blank">View</a></small>
                         @endif
                     </div>
                     <label style="display:flex; align-items:center; gap:8px; margin-top:8px;">
@@ -252,7 +252,7 @@
             <div style="margin-bottom:30px;">
                 <h3 style="color:#2d3748; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:12px;">Service Packages (multiple)</h3>
                 <p style="margin-bottom:10px; color:#4a5568;">Add multiple packages (3h / 6h / 8h / 12h). Click “Add Package” to append more rows.</p>
-                <div id="package-rows" style="display:flex; flex-direction:column; gap:12px;">
+                <div id="package-rows" data-package-index-start="{{ count($packages) ?: 1 }}" style="display:flex; flex-direction:column; gap:12px;">
                     @forelse($packages as $index => $pkg)
                         <div class="package-row" style="border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f9fafb;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -326,7 +326,7 @@
     </div>
 
     <script>
-        let packageIndex = {{ count($packages) ?: 1 }};
+        let packageIndex = Number(document.getElementById('package-rows')?.dataset?.packageIndexStart || 1);
         function addPackageRow() {
             const container = document.getElementById('package-rows');
             const idx = packageIndex++;

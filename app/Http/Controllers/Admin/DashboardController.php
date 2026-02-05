@@ -16,9 +16,25 @@ class DashboardController extends Controller
     public function index()
     {
         $stats = [
+            // Restaurants
             'total_restaurants' => $this->safeCount('restaurants'),
-            'active_restaurants' => $this->safeCount('restaurants', ['status' => 'active']),
+            'active_restaurants' => $this->safeCount('res8+taurants', ['status' => 'active']),
             'inactive_restaurants' => $this->safeCount('restaurants', ['status' => 'inactive']),
+            'pending_restaurants' => $this->safeCount('restaurants', ['status' => 'pending']),
+
+            // Guides
+            'total_guides' => $this->safeCount('guides'),
+            'active_guides' => $this->safeCount('guides', ['status' => 'active']),
+            'inactive_guides' => $this->safeCount('guides', ['status' => 'inactive']),
+            'pending_guides' => $this->safeCount('guides', ['status' => 'pending']),
+
+            // Sightseeings
+            'total_sightseeings' => $this->safeCount('sightseeings'),
+            'active_sightseeings' => $this->safeCount('sightseeings', ['status' => 'active']),
+            'inactive_sightseeings' => $this->safeCount('sightseeings', ['status' => 'inactive']),
+            'featured_sightseeings' => $this->safeCount('sightseeings', ['is_featured' => 1]),
+
+            // Bookings
             'total_bookings' => $this->safeCount('bookings'),
             'pending_bookings' => $this->safeCount('bookings', ['status' => 'pending']),
             'confirmed_bookings' => $this->safeCount('bookings', ['status' => 'confirmed']),
@@ -26,10 +42,20 @@ class DashboardController extends Controller
             'total_revenue' => $this->safeSum('bookings', 'estimated_total', ['status' => 'confirmed']),
         ];
 
+        $recentGuides = $this->getRecentGuides(6);
+        $recentRestaurants = $this->getRecentRestaurants(6);
+        $recentSightseeings = $this->getRecentSightseeings(6);
         $recentBookings = $this->getRecentBookings(10);
         $notifications = $this->safeGet('notifications', 5);
 
-        return view('admin.dashboard', compact('stats', 'recentBookings', 'notifications'));
+        return view('admin.dashboard', compact(
+            'stats',
+            'recentGuides',
+            'recentRestaurants',
+            'recentSightseeings',
+            'recentBookings',
+            'notifications'
+        ));
     }
 
     /**
@@ -98,6 +124,54 @@ class DashboardController extends Controller
                     'r.restaurant_name'
                 )
                 ->orderBy('b.created_at', 'desc')
+                ->limit($limit)
+                ->get();
+        } catch (\Exception $e) {
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get recent guides.
+     */
+    private function getRecentGuides($limit = 10)
+    {
+        try {
+            return DB::table('guides')
+                ->select('id', 'title', 'city', 'country', 'price', 'status', 'created_at')
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+        } catch (\Exception $e) {
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get recent restaurants.
+     */
+    private function getRecentRestaurants($limit = 10)
+    {
+        try {
+            return DB::table('restaurants')
+                ->select('id', 'restaurant_name', 'city', 'state', 'star_rating', 'status', 'created_at')
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+        } catch (\Exception $e) {
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get recent sightseeings.
+     */
+    private function getRecentSightseeings($limit = 10)
+    {
+        try {
+            return DB::table('sightseeings')
+                ->select('id', 'title', 'city', 'country', 'standard_price', 'currency', 'is_featured', 'status', 'created_at')
+                ->orderBy('created_at', 'desc')
                 ->limit($limit)
                 ->get();
         } catch (\Exception $e) {

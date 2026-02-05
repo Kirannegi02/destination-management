@@ -152,6 +152,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Guide bookings (listing only)
         Route::get('/guide-bookings', [\App\Http\Controllers\Admin\GuideBookingController::class, 'index'])->name('guide_bookings.index');
 
+        // Transport routes (location + vehicle type + price per km)
+        Route::prefix('transports')->name('transports.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\Admin\TransportController::class, 'export'])->name('export');
+            Route::get('/export/page', [\App\Http\Controllers\Admin\TransportController::class, 'exportPage'])->name('export.page');
+            Route::get('/import', [\App\Http\Controllers\Admin\TransportController::class, 'importForm'])->name('import.form');
+            Route::post('/import', [\App\Http\Controllers\Admin\TransportController::class, 'import'])->name('import');
+            Route::get('/import/sample', [\App\Http\Controllers\Admin\TransportController::class, 'sample'])->name('import.sample');
+        });
+        Route::resource('transports', \App\Http\Controllers\Admin\TransportController::class);
+        Route::get('/transports', [\App\Http\Controllers\Admin\TransportController::class, 'index'])->name('transports.index');
+        Route::get('/transports/{transport}', [\App\Http\Controllers\Admin\TransportController::class, 'show'])->name('transports.show');
+
+        // Vehicle routes (vehicle types - separate listing/add/edit)
+        Route::prefix('vehicles')->name('vehicles.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\Admin\VehicleController::class, 'export'])->name('export');
+            Route::get('/export/page', [\App\Http\Controllers\Admin\VehicleController::class, 'exportPage'])->name('export.page');
+            Route::get('/import', [\App\Http\Controllers\Admin\VehicleController::class, 'importForm'])->name('import.form');
+            Route::post('/import', [\App\Http\Controllers\Admin\VehicleController::class, 'import'])->name('import');
+            Route::get('/import/sample', [\App\Http\Controllers\Admin\VehicleController::class, 'sample'])->name('import.sample');
+        });
+        Route::resource('vehicles', \App\Http\Controllers\Admin\VehicleController::class);
+        Route::get('/vehicles', [\App\Http\Controllers\Admin\VehicleController::class, 'index'])->name('vehicles.index');
+        Route::get('/vehicles/{vehicle}', [\App\Http\Controllers\Admin\VehicleController::class, 'show'])->name('vehicles.show');
+
         // Meal routes
         Route::resource('meals', \App\Http\Controllers\Admin\MealController::class);
         Route::get('/meals', [\App\Http\Controllers\Admin\MealController::class, 'index'])->name('meals.index');

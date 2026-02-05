@@ -18,20 +18,17 @@ class RestaurantController extends Controller
     public function index(Request $request)
     {
         try {
-            // Get authenticated user
+            // Auth is optional for this endpoint
             $user = auth('api')->user();
-            
-            if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Please login first.'
-                ], 401);
-            }
 
             $query = Restaurant::query();
 
             // Filter by status (default to active only)
             $status = $request->get('status', 'active');
+            // For guests, always enforce active-only
+            if (!$user) {
+                $status = 'active';
+            }
             if ($status !== 'all') {
                 $query->where('status', $status);
             }
@@ -98,15 +95,21 @@ class RestaurantController extends Controller
                 $query->where('accepts_reservations', filter_var($request->accepts_reservations, FILTER_VALIDATE_BOOLEAN));
             }
 
-            // Search by restaurant name, description, or address
-            if ($request->has('search') && $request->search) {
-                $search = $request->search;
+            // Search by location only (address/city/state/country/pincode)
+            // Note: some hosting WAF rules block a `search` query param; support `location` as the preferred param.
+            $locationQuery = $request->get('location');
+            if ($locationQuery === null || $locationQuery === '') {
+                $locationQuery = $request->get('search'); // backward compatibility
+            }
+
+            if ($locationQuery !== null && $locationQuery !== '') {
+                $search = $locationQuery;
                 $query->where(function($q) use ($search) {
-                    $q->where('restaurant_name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%")
-                      ->orWhere('address', 'like', "%{$search}%")
+                    $q->where('address', 'like', "%{$search}%")
                       ->orWhere('city', 'like', "%{$search}%")
-                      ->orWhere('state', 'like', "%{$search}%");
+                      ->orWhere('state', 'like', "%{$search}%")
+                      ->orWhere('country', 'like', "%{$search}%")
+                      ->orWhere('pincode', 'like', "%{$search}%");
                 });
             }
 
@@ -229,17 +232,6 @@ class RestaurantController extends Controller
     public function show($id)
     {
         try {
-            // Get authenticated user - this will be null if token is missing or invalid
-            $user = auth('api')->user();
-            
-            if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Authentication token is required.',
-                    'error' => 'Token missing or invalid'
-                ], 401);
-            }
-
             // Validate restaurant ID
             if (!is_numeric($id) || $id <= 0) {
                 return response()->json([
@@ -276,30 +268,6 @@ class RestaurantController extends Controller
                 'data' => $this->transformRestaurant($restaurant)
             ], 200);
 
-        } catch (\Illuminate\Auth\AuthenticationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized. Authentication token is required.',
-                'error' => 'Authentication required'
-            ], 401);
-        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token has expired. Please login again.',
-                'error' => 'Token expired'
-            ], 401);
-        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid authentication token.',
-                'error' => 'Token invalid'
-            ], 401);
-        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Authentication error. Please login again.',
-                'error' => 'Token error'
-            ], 401);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -375,11 +343,13 @@ class RestaurantController extends Controller
     {
         $filters = [];
         
-        $filterFields = [
+            $filterFields = [
             'status', 'city', 'state', 'country', 
             'cuisine_type', 'price', 'price_range', 'star_rating', 'min_rating',
             'min_capacity', 'max_capacity', 'parking_available', 
-            'wifi_available', 'accepts_reservations', 'search',
+                'wifi_available', 'accepts_reservations',
+                // Prefer `location`; keep `search` for older clients.
+                'location', 'search',
             'amenities', 'payment_methods', 'sort_by', 'sort_order', 'per_page'
         ];
 

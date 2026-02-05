@@ -84,6 +84,9 @@
         .submenu.expanded {
             max-height: 200px;
         }
+        .submenu.submenu--large.expanded {
+            max-height: 420px;
+        }
 
         .submenu-item {
             display: block;
@@ -486,10 +489,55 @@
                 </a>
                 
                 @php
+                    $isTransportActive = request()->routeIs('admin.transports.*') || request()->routeIs('admin.vehicles.*');
+                    $transportCreateActive = request()->routeIs('admin.transports.create');
+                    $transportIndexActive = request()->routeIs('admin.transports.index');
+                    $vehicleCreateActive = request()->routeIs('admin.vehicles.create');
+                    $vehicleIndexActive = request()->routeIs('admin.vehicles.index');
+                @endphp
+                <div class="menu-item has-submenu {{ $isTransportActive ? 'active' : '' }}" 
+                     onclick="toggleSubmenu(this)" 
+                     style="cursor: pointer;">
+                    🚗 Transport
+                    <span class="submenu-arrow" style="float: right; margin-top: 2px;">{{ $isTransportActive ? '▼' : '▶' }}</span>
+                </div>
+                <div class="submenu submenu--large {{ $isTransportActive ? 'expanded' : '' }}">
+                    <a href="{{ route('admin.transports.create') }}" 
+                       class="submenu-item {{ $transportCreateActive ? 'active' : '' }}">
+                        ➕ Add Transport
+                    </a>
+                    <a href="{{ route('admin.transports.index') }}" 
+                       class="submenu-item {{ $transportIndexActive ? 'active' : '' }}">
+                        📋 All Transports
+                    </a>
+                    <a href="{{ route('admin.transports.import.form') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.transports.import*') ? 'active' : '' }}">
+                        ⬆️ Transport Import
+                    </a>
+                    <a href="{{ route('admin.transports.export.page') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.transports.export*') ? 'active' : '' }}">
+                        ⬇️ Transport Export
+                    </a>
+                    <a href="{{ route('admin.vehicles.create') }}" 
+                       class="submenu-item {{ $vehicleCreateActive ? 'active' : '' }}">
+                        ➕ Add Vehicle
+                    </a>
+                    <a href="{{ route('admin.vehicles.index') }}" 
+                       class="submenu-item {{ $vehicleIndexActive ? 'active' : '' }}">
+                        📋 All Vehicles
+                    </a>
+                    <a href="{{ route('admin.vehicles.import.form') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.vehicles.import*') ? 'active' : '' }}">
+                        ⬆️ Vehicle Import
+                    </a>
+                    <a href="{{ route('admin.vehicles.export.page') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.vehicles.export*') ? 'active' : '' }}">
+                        ⬇️ Vehicle Export
+                    </a>
+                </div>
+
+                @php
                     $serviceTypes = [
-                        'guide' => ['icon' => '👨‍🏫', 'label' => 'Guides'],
-                        'sightseeing' => ['icon' => '🏛️', 'label' => 'Sightseeing'],
-                        'transport' => ['icon' => '🚗', 'label' => 'Transport'],
                         'souvenir' => ['icon' => '🎁', 'label' => 'Souvenirs'],
                         'private_venue' => ['icon' => '🏰', 'label' => 'Private Venues'],
                         'catering' => ['icon' => '🍴', 'label' => 'Catering'],

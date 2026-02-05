@@ -166,7 +166,6 @@ class GuideController extends Controller
     {
         $profilePhotoUrl = null;
         if ($guide->profile_photo) {
-            // API contract: return absolute URL under storage/app/public/guides/photos
             $profilePhotoUrl = url('storage/app/public/' . ltrim($guide->profile_photo, '/'));
         }
 
