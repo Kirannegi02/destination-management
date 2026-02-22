@@ -27,8 +27,12 @@
             </div>
             <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
                 <h4 style="margin-bottom:8px; color:#2d3748;">Pricing</h4>
+                <p style="color:#4a5568;">Price per day: <strong>{{ $transport->price_per_day ? number_format($transport->price_per_day, 2) . ' ' . ($transport->currency ?? '') : '—' }}</strong></p>
+                <p style="color:#4a5568;">Currency: <strong>{{ $transport->currency ?? '—' }}</strong></p>
+            </div>
+            <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
+                <h4 style="margin-bottom:8px; color:#2d3748;">Distance-based (between cities)</h4>
                 <p style="color:#4a5568;">Price per km: <strong>{{ number_format($transport->price_per_km, 2) }}</strong></p>
-                <p style="color:#4a5568;">Min charge: <strong>{{ $transport->min_charge ? number_format($transport->min_charge, 2) : '—' }}</strong></p>
             </div>
         </div>
 

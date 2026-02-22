@@ -16,8 +16,9 @@
     <form action="{{ route('admin.transports.store') }}" method="POST" style="padding:20px;">
         @csrf
         <div style="margin-bottom:20px;">
-            <label>Location (e.g. city, country)</label>
-            <input type="text" name="location" value="{{ old('location') }}" placeholder="e.g. Delhi, India" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
+            <label>Location / City (e.g. Paris, Zurich)</label>
+            <input type="text" name="location" value="{{ old('location') }}" placeholder="e.g. Paris, Zurich" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
+            <small style="color:#718096;">Destination city for per-day and transfer pricing.</small>
         </div>
         <div style="margin-bottom:20px;">
             <label>Vehicle (required)</label>
@@ -28,16 +29,24 @@
                 @endforeach
             </select>
             @if($vehicles->isEmpty())
-            <small style="color:#e53e3e;">Add a vehicle first from Transport menu.</small>
+            <small style="color:#e53e3e;">Add a vehicle first from Vehicles menu.</small>
             @endif
         </div>
+        <div style="margin-top:24px; margin-bottom:8px; font-weight:600; color:#4a5568;">Pricing</div>
+        <div style="margin-bottom:20px;">
+            <label>Price per day (required)</label>
+            <input type="number" name="price_per_day" value="{{ old('price_per_day') }}" step="0.01" min="0" required placeholder="e.g. 950" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
+            <small style="color:#718096;">Daily charge for vehicle (e.g. 12h disposal) when staying in this city.</small>
+        </div>
+        <div style="margin-bottom:20px;">
+            <label>Currency</label>
+            <input type="text" name="currency" value="{{ old('currency', 'EUR') }}" placeholder="EUR, INR" maxlength="10" style="width:100%; max-width:120px; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
+        </div>
+        <div style="margin-top:24px; margin-bottom:8px; font-weight:600; color:#4a5568;">Distance-based (between cities)</div>
         <div style="margin-bottom:20px;">
             <label>Price per km (required)</label>
             <input type="number" name="price_per_km" value="{{ old('price_per_km') }}" step="0.01" min="0" required style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
-        </div>
-        <div style="margin-bottom:20px;">
-            <label>Minimum charge</label>
-            <input type="number" name="min_charge" value="{{ old('min_charge') }}" step="0.01" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
+            <small style="color:#718096;">Charge per km when customer travels between cities by your vehicle.</small>
         </div>
         <div style="margin-bottom:20px;">
             <label>Notes</label>

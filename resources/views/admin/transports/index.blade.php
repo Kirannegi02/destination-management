@@ -77,7 +77,7 @@
                         <th>Location</th>
                         <th>Vehicle</th>
                         <th>Price/km</th>
-                        <th>Min charge</th>
+                        <th>Price/day</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -89,7 +89,7 @@
                             <td>{{ $t->location ?? '—' }}</td>
                             <td>{{ $t->vehicle ? $t->vehicle->name : 'N/A' }}</td>
                             <td>{{ number_format($t->price_per_km, 2) }}</td>
-                            <td>{{ $t->min_charge ? number_format($t->min_charge, 2) : '—' }}</td>
+                            <td>{{ $t->price_per_day ? number_format($t->price_per_day, 2) : '—' }}</td>
                             <td>
                                 @if($t->status === 'active')
                                     <span class="badge badge-success">Active</span>

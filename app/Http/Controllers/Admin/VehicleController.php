@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -13,10 +14,13 @@ class VehicleController extends Controller
 {
     private array $importableColumns = [
         'name',
+        'vehicle_category',
         'capacity_seats',
         'description',
+        'image',
         'currency',
         'status',
+        'sort_order',
     ];
 
     public function index(Request $request)
@@ -35,7 +39,7 @@ class VehicleController extends Controller
             $query->where('status', $request->status);
         }
 
-        $vehicles = $query->orderBy('name')->paginate(15);
+        $vehicles = $query->orderBy('sort_order')->orderBy('name')->paginate(15);
 
         $allCount = Vehicle::count();
         $activeCount = Vehicle::where('status', 'active')->count();
@@ -59,6 +63,12 @@ class VehicleController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateVehicle($request);
+        if ($request->hasFile('image')) {
+            $result = ImageService::upload($request->file('image'), 'vehicles');
+            $validated['image'] = $result['path'];
+        } else {
+            $validated['image'] = null;
+        }
         Vehicle::create($validated);
         return redirect()->route('admin.vehicles.index')->with('success', 'Vehicle created successfully.');
     }
@@ -79,6 +89,12 @@ class VehicleController extends Controller
     {
         $vehicle = Vehicle::findOrFail($id);
         $validated = $this->validateVehicle($request);
+        if ($request->hasFile('image')) {
+            $result = ImageService::update($request->file('image'), $vehicle->image, 'vehicles');
+            $validated['image'] = $result['path'];
+        } else {
+            $validated['image'] = $vehicle->image;
+        }
         $vehicle->update($validated);
         return redirect()->route('admin.vehicles.index')->with('success', 'Vehicle updated successfully.');
     }
@@ -140,10 +156,13 @@ class VehicleController extends Controller
 
             $validator = Validator::make($payload, [
                 'name' => 'required|string|max:255',
+                'vehicle_category' => 'nullable|string|in:van,16_seater,19_seater,full_size_coach,luxury_cars',
                 'capacity_seats' => 'nullable|integer|min:1|max:100',
                 'description' => 'nullable|string',
+                'image' => 'nullable|string|max:512',
                 'currency' => 'nullable|string|max:10',
                 'status' => 'required|in:active,inactive,pending',
+                'sort_order' => 'nullable|integer|min:0',
             ]);
 
             if ($validator->fails()) {
@@ -233,10 +252,13 @@ class VehicleController extends Controller
     {
         return $request->validate([
             'name' => 'required|string|max:255',
+            'vehicle_category' => 'nullable|string|max:64|in:van,16_seater,19_seater,full_size_coach,luxury_cars',
             'capacity_seats' => 'nullable|integer|min:1|max:100',
             'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'currency' => 'nullable|string|max:10',
             'status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
+            'sort_order' => 'nullable|integer|min:0',
         ]);
     }
 
@@ -380,6 +402,9 @@ class VehicleController extends Controller
         if (empty($payload['currency'])) {
             $payload['currency'] = 'INR';
         }
+        if (!isset($payload['sort_order']) || $payload['sort_order'] === '') {
+            $payload['sort_order'] = 0;
+        }
         return $payload;
     }
 
@@ -399,7 +424,14 @@ class VehicleController extends Controller
             return in_array($value, ['active', 'inactive', 'pending'], true) ? $value : 'pending';
         }
         if ($column === 'capacity_seats') {
+            return is_numeric($value) ? (int) $value : null;
+        }
+        if ($column === 'sort_order') {
             return is_numeric($value) ? (int) $value : 0;
+        }
+        if ($column === 'vehicle_category' && $value !== null) {
+            $value = strtolower(preg_replace('/\s+/', '_', (string) $value));
+            return in_array($value, ['van', '16_seater', '19_seater', 'full_size_coach', 'luxury_cars'], true) ? $value : null;
         }
         return $value;
     }
@@ -416,10 +448,13 @@ class VehicleController extends Controller
         foreach ($vehicles as $v) {
             $rows[] = [
                 $v->name,
+                $v->vehicle_category,
                 $v->capacity_seats,
                 $v->description,
+                $v->image,
                 $v->currency ?? 'INR',
                 $v->status,
+                $v->sort_order ?? 0,
             ];
         }
         return $rows;
@@ -448,13 +483,14 @@ class VehicleController extends Controller
         return [
             $this->importableColumns,
             [
-                'Sedan',
-                4,
-                'AC Sedan for city transfers',
-                20.00,
-                'INR',
+                '49 Seater',
+                'full_size_coach',
+                49,
+                'Full size coach',
+                '',
+                'EUR',
                 'active',
-                1,
+                10,
             ],
         ];
     }

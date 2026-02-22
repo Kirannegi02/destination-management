@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    /*
+    | Distance API: used to calculate km between pick and drop locations (transport quotes).
+    | - GOOGLE_MAPS_API_KEY: optional; when set, Google Distance Matrix is used.
+    | - When not set, falls back to OpenStreetMap (Nominatim + OSRM), then Admin Location Distances, then test distance.
+    | - TRANSPORT_FALLBACK_DISTANCE_KM: used when no API and no DB row (e.g. 100 for testing without any key).
+    */
+    'google' => [
+        'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
+    'transport' => [
+        'fallback_distance_km' => (float) env('TRANSPORT_FALLBACK_DISTANCE_KM', 100),
+    ],
+
 ];

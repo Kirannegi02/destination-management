@@ -251,7 +251,8 @@ class TransportController extends Controller
             'location' => 'nullable|string|max:255',
             'vehicle_id' => 'required|exists:vehicles,id',
             'price_per_km' => 'required|numeric|min:0',
-            'min_charge' => 'nullable|numeric|min:0',
+            'price_per_day' => 'required|numeric|min:0',
+            'currency' => 'nullable|string|max:10',
             'notes' => 'nullable|string',
             'status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
         ]);

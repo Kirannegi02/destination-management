@@ -85,7 +85,7 @@
             max-height: 200px;
         }
         .submenu.submenu--large.expanded {
-            max-height: 420px;
+            max-height: 520px;
         }
 
         .submenu-item {
@@ -489,7 +489,7 @@
                 </a>
                 
                 @php
-                    $isTransportActive = request()->routeIs('admin.transports.*') || request()->routeIs('admin.vehicles.*');
+                    $isTransportActive = request()->routeIs('admin.transports.*') || request()->routeIs('admin.vehicles.*') || request()->routeIs('admin.location-distances.*') || request()->routeIs('admin.transport-bookings.*');
                     $transportCreateActive = request()->routeIs('admin.transports.create');
                     $transportIndexActive = request()->routeIs('admin.transports.index');
                     $vehicleCreateActive = request()->routeIs('admin.vehicles.create');
@@ -533,6 +533,14 @@
                     <a href="{{ route('admin.transports.export.page') }}" 
                        class="submenu-item {{ request()->routeIs('admin.transports.export*') ? 'active' : '' }}">
                         ⬇️ Transport Export
+                    </a>
+                    <a href="{{ route('admin.location-distances.index') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.location-distances.*') ? 'active' : '' }}">
+                        📍 Location Distances
+                    </a>
+                    <a href="{{ route('admin.transport-bookings.index') }}" 
+                       class="submenu-item {{ request()->routeIs('admin.transport-bookings.*') ? 'active' : '' }}">
+                        📋 Quote Requests
                     </a>
                 </div>
 

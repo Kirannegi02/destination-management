@@ -164,6 +164,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/transports', [\App\Http\Controllers\Admin\TransportController::class, 'index'])->name('transports.index');
         Route::get('/transports/{transport}', [\App\Http\Controllers\Admin\TransportController::class, 'show'])->name('transports.show');
 
+        Route::resource('location-distances', \App\Http\Controllers\Admin\LocationDistanceController::class)->except(['show']);
+        Route::get('/location-distances', [\App\Http\Controllers\Admin\LocationDistanceController::class, 'index'])->name('location-distances.index');
+
+        Route::get('/transport-bookings', [\App\Http\Controllers\Admin\TransportBookingController::class, 'index'])->name('transport-bookings.index');
+        Route::get('/transport-bookings/{id}', [\App\Http\Controllers\Admin\TransportBookingController::class, 'show'])->name('transport-bookings.show')->whereNumber('id');
+        Route::post('/transport-bookings/{id}/status', [\App\Http\Controllers\Admin\TransportBookingController::class, 'updateStatus'])->name('transport-bookings.status')->whereNumber('id');
+
         // Vehicle routes (vehicle types - separate listing/add/edit)
         Route::prefix('vehicles')->name('vehicles.')->group(function () {
             Route::get('/export', [\App\Http\Controllers\Admin\VehicleController::class, 'export'])->name('export');

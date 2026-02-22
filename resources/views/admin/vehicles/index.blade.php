@@ -32,12 +32,13 @@
     </div>
     @if($vehicles->count()>0)
     <table class="table">
-        <thead><tr><th>ID</th><th>Name</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
         @foreach($vehicles as $v)
         <tr>
             <td>{{ $v->id }}</td>
             <td><strong>{{ $v->name }}</strong></td>
+            <td>{{ $v->vehicle_category ? \Illuminate\Support\Arr::get(\App\Models\Vehicle::CATEGORIES, $v->vehicle_category, $v->vehicle_category) : '—' }}</td>
             <td>{{ $v->capacity_seats ?? '—' }}</td>
             <td>@if($v->status==='active')<span class="badge badge-success">Active</span>@elseif($v->status==='inactive')<span class="badge badge-danger">Inactive</span>@else<span class="badge" style="background:#fbbf24;color:white;">Pending</span>@endif</td>
             <td>

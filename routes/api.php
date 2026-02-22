@@ -42,6 +42,15 @@ Route::get('/images/{path}', [\App\Http\Controllers\Api\ImageController::class, 
     ->where('path', '.*')
     ->name('api.images.serve');
 
+// Public transport/vehicle routes (no authentication required)
+Route::prefix('vehicles')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\VehicleController::class, 'index']);
+    Route::get('/{id}', [\App\Http\Controllers\Api\VehicleController::class, 'show'])->whereNumber('id');
+});
+Route::post('/transports/quote', [\App\Http\Controllers\Api\TransportQuoteController::class, 'quote']);
+Route::post('/transports/quote-request', [\App\Http\Controllers\Api\TransportQuoteController::class, 'store']);
+Route::post('/transport-bookings', [\App\Http\Controllers\Api\TransportQuoteController::class, 'store']);
+
 // Public restaurant routes (no authentication required)
 Route::prefix('restaurants')->group(function () {
     // Get list of restaurants with filters (public)
@@ -80,6 +89,11 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/', [GuideBookingController::class, 'index']);
         Route::post('/', [GuideBookingController::class, 'store']);
         Route::post('/{id}/cancel', [GuideBookingController::class, 'cancel']);
+    });
+
+    Route::prefix('transport-bookings')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\TransportQuoteController::class, 'index']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\TransportQuoteController::class, 'show'])->whereNumber('id');
     });
     
     // Bookings (no payment)

@@ -8,8 +8,15 @@
         <a href="{{ route('admin.vehicles.index') }}" style="color:#667eea;text-decoration:none;">Back to Vehicles</a>
     </div>
     <div style="padding:20px;">
+        @if($vehicle->image_url)
+            <div style="margin-bottom:20px;">
+                <img src="{{ $vehicle->image_url }}" alt="{{ $vehicle->name }}" style="max-width:280px;max-height:200px;object-fit:contain;border:1px solid #e2e8f0;border-radius:8px;">
+            </div>
+        @endif
+        <p><strong>Category:</strong> {{ $vehicle->vehicle_category ? \Illuminate\Support\Arr::get(\App\Models\Vehicle::CATEGORIES, $vehicle->vehicle_category, $vehicle->vehicle_category) : '—' }}</p>
         <p><strong>Capacity:</strong> {{ $vehicle->capacity_seats ?? 'N/A' }} seats</p>
         @if($vehicle->description)<p><strong>Description:</strong> {{ $vehicle->description }}</p>@endif
+        <p><strong>Display order:</strong> {{ $vehicle->sort_order ?? 0 }}</p>
         <p><strong>Transport routes:</strong> {{ $vehicle->transports->count() }}</p>
     </div>
     <div style="padding:20px;border-top:1px solid #e2e8f0;">
