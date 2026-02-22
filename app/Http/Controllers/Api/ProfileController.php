@@ -11,41 +11,26 @@ use Illuminate\Support\Facades\Validator;
 class ProfileController extends Controller
 {
     /**
-     * Validate GST number format (Indian GST format)
-     * GST number format: 15 characters, alphanumeric
-     * Format: 2 digits (state code) + 10 characters (PAN: 5 letters + 4 digits + 1 letter) + 1 alphanumeric (entity number) + Z + 1 alphanumeric (check digit)
-     * Example: 27AABCU9603R1ZX
-     * Pattern breakdown: 27 (state) + AABCU9603R (PAN) + 1 (entity) + Z + X (check)
+     * Validate tax number format (Indian GST format: 15 characters)
+     * Format: 2 digits (state code) + 10 characters (PAN) + 1 alphanumeric + Z + 1 alphanumeric
      */
-    private function validateGstNumber($gstNumber)
+    private function validateTaxNumber($taxNumber)
     {
-        // Remove spaces and convert to uppercase
-        $gstNumber = strtoupper(trim($gstNumber));
-        
-        // Check length (should be 15 characters)
-        if (strlen($gstNumber) !== 15) {
+        $taxNumber = strtoupper(trim($taxNumber));
+        if (strlen($taxNumber) !== 15) {
             return false;
         }
-        
-        // Check format: 2 digits (state) + 5 letters + 4 digits + 1 letter (PAN) + 1 alphanumeric (entity) + Z + 1 alphanumeric (check)
-        // Pattern: ^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$
         $pattern = '/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/';
-        
-        if (!preg_match($pattern, $gstNumber)) {
+        if (!preg_match($pattern, $taxNumber)) {
             return false;
         }
-        
-        // Additional validation: State code should be between 01-38 (Indian states/UTs)
-        $stateCode = (int) substr($gstNumber, 0, 2);
+        $stateCode = (int) substr($taxNumber, 0, 2);
         if ($stateCode < 1 || $stateCode > 38) {
             return false;
         }
-        
-        // Check that position 13 is 'Z'
-        if (substr($gstNumber, 13, 1) !== 'Z') {
+        if (substr($taxNumber, 13, 1) !== 'Z') {
             return false;
         }
-        
         return true;
     }
 
@@ -80,7 +65,7 @@ class ProfileController extends Controller
                 'email' => 'required|email|max:255|unique:users,email,' . $user->id,
                 'mobile' => 'required|string|max:20',
                 'alternate_phone' => 'nullable|string|max:20',
-                'gst_number' => 'required|string|max:15|unique:users,gst_number,' . $user->id,
+                'tax_number' => 'required|string|max:15|unique:users,tax_number,' . $user->id,
                 'address' => 'required|string',
                 'country' => 'required|string|max:100',
                 'state' => 'required|string|max:100',
@@ -96,14 +81,14 @@ class ProfileController extends Controller
                 ], 422);
             }
 
-            // Validate GST number format
-            $gstNumber = strtoupper(trim($request->gst_number));
-            if (!$this->validateGstNumber($gstNumber)) {
+            // Validate tax number format
+            $taxNumber = strtoupper(trim($request->tax_number));
+            if (!$this->validateTaxNumber($taxNumber)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid GST number format. Please provide a valid 15-character GST number.',
+                    'message' => 'Invalid tax number format. Please provide a valid 15-character tax number.',
                     'errors' => [
-                        'gst_number' => ['GST number must be 15 characters in format: 2 digits (state code) + 10 alphanumeric (PAN) + 1 digit + Z + 1 digit']
+                        'tax_number' => ['Tax number must be 15 characters in format: 2 digits (state code) + 10 alphanumeric (PAN) + 1 digit + Z + 1 digit']
                     ]
                 ], 422);
             }
@@ -135,7 +120,7 @@ class ProfileController extends Controller
                 'email' => $request->email,
                 'phone' => $request->mobile,
                 'alternate_phone' => $request->alternate_phone,
-                'gst_number' => $gstNumber,
+                'tax_number' => $taxNumber,
                 'address' => $request->address,
                 'country' => $request->country,
                 'state' => $request->state,
@@ -184,7 +169,7 @@ class ProfileController extends Controller
                 'email' => 'sometimes|required|email|max:255|unique:users,email,' . $user->id,
                 'mobile' => 'sometimes|required|string|max:20',
                 'alternate_phone' => 'nullable|string|max:20',
-                'gst_number' => 'sometimes|required|string|max:15|unique:users,gst_number,' . $user->id,
+                'tax_number' => 'sometimes|required|string|max:15|unique:users,tax_number,' . $user->id,
                 'address' => 'sometimes|required|string',
                 'country' => 'sometimes|required|string|max:100',
                 'state' => 'sometimes|required|string|max:100',
@@ -200,15 +185,15 @@ class ProfileController extends Controller
                 ], 422);
             }
 
-            // Validate GST number if provided
-            if ($request->has('gst_number')) {
-                $gstNumber = strtoupper(trim($request->gst_number));
-                if (!$this->validateGstNumber($gstNumber)) {
+            // Validate tax number if provided
+            if ($request->has('tax_number')) {
+                $taxNumber = strtoupper(trim($request->tax_number));
+                if (!$this->validateTaxNumber($taxNumber)) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Invalid GST number format. Please provide a valid 15-character GST number.',
+                        'message' => 'Invalid tax number format. Please provide a valid 15-character tax number.',
                         'errors' => [
-                            'gst_number' => ['GST number must be 15 characters in format: 2 digits (state code) + 10 alphanumeric (PAN) + 1 digit + Z + 1 digit']
+                            'tax_number' => ['Tax number must be 15 characters in format: 2 digits (state code) + 10 alphanumeric (PAN) + 1 digit + Z + 1 digit']
                         ]
                     ], 422);
                 }
@@ -241,7 +226,7 @@ class ProfileController extends Controller
             if ($request->has('email')) $updateData['email'] = $request->email;
             if ($request->has('mobile')) $updateData['phone'] = $request->mobile;
             if ($request->has('alternate_phone')) $updateData['alternate_phone'] = $request->alternate_phone;
-            if ($request->has('gst_number')) $updateData['gst_number'] = strtoupper(trim($request->gst_number));
+            if ($request->has('tax_number')) $updateData['tax_number'] = strtoupper(trim($request->tax_number));
             if ($request->has('address')) $updateData['address'] = $request->address;
             if ($request->has('country')) $updateData['country'] = $request->country;
             if ($request->has('state')) $updateData['state'] = $request->state;
@@ -321,7 +306,7 @@ class ProfileController extends Controller
             'city' => $user->city,
             'pincode' => $user->pincode,
             'address' => $user->address,
-            'gst_number' => $user->gst_number,
+            'tax_number' => $user->tax_number,
             'status' => $user->status,
             'profile_completed_at' => $user->profile_completed_at?->toISOString(),
             'created_at' => $user->created_at->toISOString(),

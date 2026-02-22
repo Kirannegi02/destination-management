@@ -25,7 +25,7 @@ class UserController extends Controller
                   ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('agency_name', 'like', "%{$search}%")
-                  ->orWhere('gst_number', 'like', "%{$search}%");
+                  ->orWhere('tax_number', 'like', "%{$search}%");
             });
         }
 
@@ -77,7 +77,7 @@ class UserController extends Controller
             'phone' => 'required|string|max:20|unique:users,phone',
             'alternate_phone' => 'nullable|string|max:20',
             'agency_name' => 'required|string|max:255',
-            'gst_number' => 'required|string|max:15|unique:users,gst_number',
+            'tax_number' => 'required|string|max:15|unique:users,tax_number',
             'address' => 'required|string',
             'country' => 'required|string|max:100',
             'state' => 'required|string|max:100',
@@ -87,14 +87,14 @@ class UserController extends Controller
             'status' => 'required|in:active,inactive,pending',
         ]);
 
-        // Validate GST number format
-        $gstNumber = strtoupper(trim($validated['gst_number']));
-        if (!$this->validateGstNumber($gstNumber)) {
+        // Validate tax number format
+        $taxNumber = strtoupper(trim($validated['tax_number']));
+        if (!$this->validateTaxNumber($taxNumber)) {
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['gst_number' => 'Invalid GST number format. Must be 15 characters in format: 2 digits (state code) + 10 alphanumeric (PAN) + 1 digit + Z + 1 digit']);
+                ->withErrors(['tax_number' => 'Invalid tax number format. Must be 15 characters in format: 2 digits (state code) + 10 alphanumeric (PAN) + 1 digit + Z + 1 digit']);
         }
-        $validated['gst_number'] = $gstNumber;
+        $validated['tax_number'] = $taxNumber;
 
         // Create user
         $user = User::create([
@@ -103,7 +103,7 @@ class UserController extends Controller
             'phone' => $validated['phone'],
             'alternate_phone' => $validated['alternate_phone'] ?? null,
             'agency_name' => $validated['agency_name'],
-            'gst_number' => $validated['gst_number'],
+            'tax_number' => $validated['tax_number'],
             'address' => $validated['address'],
             'country' => $validated['country'],
             'state' => $validated['state'],
@@ -170,7 +170,7 @@ class UserController extends Controller
             'phone' => 'required|string|max:20',
             'alternate_phone' => 'nullable|string|max:20',
             'agency_name' => 'required|string|max:255',
-            'gst_number' => 'required|string|max:15|unique:users,gst_number,' . $user->id,
+            'tax_number' => 'required|string|max:15|unique:users,tax_number,' . $user->id,
             'address' => 'required|string',
             'country' => 'required|string|max:100',
             'state' => 'required|string|max:100',
@@ -180,14 +180,14 @@ class UserController extends Controller
             'status' => 'required|in:active,inactive,pending',
         ]);
 
-        // Validate GST number format
-        $gstNumber = strtoupper(trim($validated['gst_number']));
-        if (!$this->validateGstNumber($gstNumber)) {
+        // Validate tax number format
+        $taxNumber = strtoupper(trim($validated['tax_number']));
+        if (!$this->validateTaxNumber($taxNumber)) {
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['gst_number' => 'Invalid GST number format. Must be 15 characters.']);
+                ->withErrors(['tax_number' => 'Invalid tax number format. Must be 15 characters.']);
         }
-        $validated['gst_number'] = $gstNumber;
+        $validated['tax_number'] = $taxNumber;
 
         // Handle image upload
         if ($request->hasFile('image')) {
@@ -245,28 +245,28 @@ class UserController extends Controller
     }
 
     /**
-     * Validate GST number format (Indian GST format)
+     * Validate tax number format (Indian GST format: 15 chars)
      */
-    private function validateGstNumber($gstNumber)
+    private function validateTaxNumber($taxNumber)
     {
-        $gstNumber = strtoupper(trim($gstNumber));
+        $taxNumber = strtoupper(trim($taxNumber));
         
-        if (strlen($gstNumber) !== 15) {
+        if (strlen($taxNumber) !== 15) {
             return false;
         }
         
         $pattern = '/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/';
         
-        if (!preg_match($pattern, $gstNumber)) {
+        if (!preg_match($pattern, $taxNumber)) {
             return false;
         }
         
-        $stateCode = (int) substr($gstNumber, 0, 2);
+        $stateCode = (int) substr($taxNumber, 0, 2);
         if ($stateCode < 1 || $stateCode > 38) {
             return false;
         }
         
-        if (substr($gstNumber, 13, 1) !== 'Z') {
+        if (substr($taxNumber, 13, 1) !== 'Z') {
             return false;
         }
         

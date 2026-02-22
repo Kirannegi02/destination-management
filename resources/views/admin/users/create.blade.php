@@ -120,15 +120,15 @@
 
                 <div class="form-group">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                        GST Number <span style="color: #e53e3e;">*</span>
-                    </label>
-                    <input type="text" 
-                           name="gst_number" 
-                           value="{{ old('gst_number') }}" 
+                        Tax Number <span style="color: #e53e3e;">*</span>
+                        </label>
+                        <input type="text"
+                               name="tax_number"
+                               value="{{ old('tax_number') }}"
                            required
                            maxlength="15"
                            style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; text-transform: uppercase;">
-                    @error('gst_number')
+                    @error('tax_number')
                         <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
                     @enderror
                 </div>

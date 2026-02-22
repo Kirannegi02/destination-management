@@ -34,7 +34,7 @@ class User extends Authenticatable implements JWTSubject
         // Agent profile fields
         'image',
         'agency_name',
-        'gst_number',
+        'tax_number',
         'address',
         'state',
         'city',

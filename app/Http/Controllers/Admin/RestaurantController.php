@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Restaurant;
 use App\Services\ImageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use ZipArchive;
 
@@ -34,7 +35,7 @@ class RestaurantController extends Controller
         'parking_available',
         'wifi_available',
         'accepts_reservations',
-        'gst_number',
+        'tax_number',
         'license_number',
     ];
 
@@ -138,7 +139,7 @@ class RestaurantController extends Controller
             'seating_capacity' => 'nullable|integer|min:1',
             'opening_hours' => 'nullable|array',
             'amenities' => 'nullable|array',
-            'gst_number' => 'nullable|string|max:15',
+            'tax_number' => 'nullable|string|max:15',
             'license_number' => 'nullable|string|max:100',
             'parking_available' => 'boolean',
             'wifi_available' => 'boolean',
@@ -169,6 +170,9 @@ class RestaurantController extends Controller
             }
         }
         $validated['images'] = !empty($imagePaths) ? $imagePaths : null;
+
+        // Handle video: file upload or URL
+        $validated['video'] = $this->resolveRestaurantVideo($request, null);
 
         // Handle amenities - convert from comma-separated string or use JSON array
         if ($request->has('amenities_input') && $request->amenities_input) {
@@ -243,13 +247,15 @@ class RestaurantController extends Controller
             'website' => 'nullable|url|max:255',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'video' => 'nullable|file|mimes:mp4,mov,webm|max:51200',
+            'video_url' => 'nullable|string|max:1000',
             'star_rating' => 'nullable|integer|min:1|max:5',
             'price' => 'nullable|numeric|min:0',
             'cuisine_type' => 'nullable|string|max:100',
             'seating_capacity' => 'nullable|integer|min:1',
             'opening_hours' => 'nullable|array',
             'amenities' => 'nullable|array',
-            'gst_number' => 'nullable|string|max:15',
+            'tax_number' => 'nullable|string|max:15',
             'license_number' => 'nullable|string|max:100',
             'parking_available' => 'boolean',
             'wifi_available' => 'boolean',
@@ -260,6 +266,9 @@ class RestaurantController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'status' => 'required|in:active,inactive,pending',
         ]);
+
+        // Handle video (new upload, URL, or remove)
+        $validated['video'] = $this->resolveRestaurantVideo($request, $restaurant);
 
         // Handle new image uploads
         $existingImages = $restaurant->images ?? [];
@@ -357,12 +366,80 @@ class RestaurantController extends Controller
                 ImageService::delete($imagePath);
             }
         }
-        
+
+        // Delete video file if stored path (not external URL)
+        if ($restaurant->video && !str_starts_with($restaurant->video, 'http')) {
+            $path = str_replace(['public/', 'storage/'], '', $restaurant->video);
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
         $restaurant->delete();
 
         return redirect()
             ->route('admin.restaurants.index')
             ->with('success', 'Restaurant deleted successfully.');
+    }
+
+    /**
+     * Resolve restaurant video from request: file upload, URL, or keep/remove existing.
+     *
+     * @param Request $request
+     * @param Restaurant|null $existing Existing restaurant (for update) or null (create)
+     * @return string|null
+     */
+    private function resolveRestaurantVideo(Request $request, ?Restaurant $existing): ?string
+    {
+        // Explicit remove (edit form)
+        if ($request->has('video_remove') && $request->boolean('video_remove')) {
+            $this->deleteRestaurantVideoFile($existing);
+            return null;
+        }
+
+        // New file upload
+        if ($request->hasFile('video') && $request->file('video')->isValid()) {
+            $this->deleteRestaurantVideoFile($existing);
+            $file = $request->file('video');
+            $dir = 'restaurants/videos';
+            if (!Storage::disk('public')->exists($dir)) {
+                Storage::disk('public')->makeDirectory($dir);
+            }
+            $name = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+            $path = $file->storeAs($dir, $name, 'public');
+            return $path;
+        }
+
+        // Video URL (paste link)
+        $url = $request->input('video_url');
+        if (is_string($url) && trim($url) !== '') {
+            $this->deleteRestaurantVideoFile($existing);
+            return trim($url);
+        }
+
+        // Update: keep existing
+        if ($existing && $existing->video) {
+            return $existing->video;
+        }
+
+        return null;
+    }
+
+    /**
+     * Delete stored video file (not external URL) for a restaurant.
+     */
+    private function deleteRestaurantVideoFile(?Restaurant $restaurant): void
+    {
+        if (!$restaurant || !$restaurant->video) {
+            return;
+        }
+        if (str_starts_with($restaurant->video, 'http')) {
+            return;
+        }
+        $path = str_replace(['public/', 'storage/'], '', $restaurant->video);
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     /**
@@ -437,7 +514,7 @@ class RestaurantController extends Controller
                 'cuisine_type' => 'nullable|string|max:100',
                 'seating_capacity' => 'nullable|integer|min:1',
                 'status' => 'required|in:active,inactive,pending',
-                'gst_number' => 'nullable|string|max:15',
+                'tax_number' => 'nullable|string|max:15',
                 'license_number' => 'nullable|string|max:100',
             ]);
 
@@ -797,7 +874,7 @@ class RestaurantController extends Controller
                 $restaurant->parking_available ? 'Yes' : 'No',
                 $restaurant->wifi_available ? 'Yes' : 'No',
                 $restaurant->accepts_reservations ? 'Yes' : 'No',
-                $restaurant->gst_number,
+                $restaurant->tax_number,
                 $restaurant->license_number,
             ];
         }

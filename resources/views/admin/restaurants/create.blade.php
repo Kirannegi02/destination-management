@@ -332,6 +332,38 @@
                 </div>
             </div>
 
+            <!-- Restaurant Video Section -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 20px;">Restaurant Video</h3>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
+                        Upload video file
+                    </label>
+                    <input type="file"
+                           name="video"
+                           accept="video/mp4,video/quicktime,video/webm"
+                           style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                    <small style="color: #718096; font-size: 12px; display: block; margin-top: 4px;">MP4, MOV or WEBM. Max 50MB.</small>
+                    @error('video')
+                        <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
+                        Or paste video URL
+                    </label>
+                    <input type="url"
+                           name="video_url"
+                           value="{{ old('video_url') }}"
+                           placeholder="https://www.youtube.com/embed/... or https://vimeo.com/... or direct video URL"
+                           style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                    <small style="color: #718096; font-size: 12px; display: block; margin-top: 4px;">YouTube embed URL, Vimeo URL, or direct link to a video file.</small>
+                    @error('video_url')
+                        <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+
             <!-- Business Information Section -->
             <div style="margin-bottom: 30px;">
                 <h3 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 20px;">Business Information</h3>
@@ -339,14 +371,14 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                            GST Number
+                            Tax Number
                         </label>
-                        <input type="text" 
-                               name="gst_number" 
-                               value="{{ old('gst_number') }}"
+                        <input type="text"
+                               name="tax_number"
+                               value="{{ old('tax_number') }}"
                                maxlength="15"
                                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; text-transform: uppercase;">
-                        @error('gst_number')
+                        @error('tax_number')
                             <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
                         @enderror
                     </div>

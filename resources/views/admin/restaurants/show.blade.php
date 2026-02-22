@@ -45,6 +45,40 @@
                 </div>
             @endif
 
+            <!-- Restaurant Video -->
+            @if($restaurant->video_url)
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">Restaurant Video</h3>
+                    @php
+                        $videoUrl = $restaurant->video_url;
+                        $isYoutube = preg_match('%(?:youtube\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)([^"&?/\s]{11})%i', $videoUrl, $yt) || preg_match('%youtube\.com/embed/([^"&?/\s]+)%i', $videoUrl, $yt);
+                        $isVimeo = preg_match('%vimeo\.com/(?:video/)?(\d+)%i', $videoUrl, $vm);
+                    @endphp
+                    @if($isYoutube)
+                        @php $ytId = $yt[1] ?? null; @endphp
+                        @if($ytId)
+                            <div style="max-width: 800px; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0;">
+                                <iframe src="https://www.youtube.com/embed/{{ $ytId }}?rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>
+                            </div>
+                        @endif
+                    @elseif($isVimeo)
+                        @php $vmId = $vm[1] ?? null; @endphp
+                        @if($vmId)
+                            <div style="max-width: 800px; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0;">
+                                <iframe src="https://player.vimeo.com/video/{{ $vmId }}" allow="fullscreen; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:none;"></iframe>
+                            </div>
+                        @endif
+                    @else
+                        <div style="max-width: 800px; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0;">
+                            <video controls playsinline style="width:100%;display:block;" preload="metadata">
+                                <source src="{{ $videoUrl }}" type="video/mp4">
+                                <p style="padding:16px;">Your browser does not support the video tag. <a href="{{ $videoUrl }}" target="_blank" rel="noopener">Open video</a>.</p>
+                            </video>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
                 <!-- Left Column - Main Information -->
                 <div>
@@ -260,10 +294,10 @@
                     <div style="margin-bottom: 30px; padding: 20px; background: #f7fafc; border-radius: 8px;">
                         <h3 style="color: #2d3748; margin-bottom: 16px; font-size: 18px;">🏢 Business Information</h3>
                         <div style="display: grid; gap: 12px;">
-                            @if($restaurant->gst_number)
+                            @if($restaurant->tax_number)
                                 <div>
-                                    <strong style="color: #4a5568; display: block; margin-bottom: 4px; font-size: 12px;">GST Number:</strong>
-                                    <span style="color: #2d3748; font-family: monospace;">{{ $restaurant->gst_number }}</span>
+                                    <strong style="color: #4a5568; display: block; margin-bottom: 4px; font-size: 12px;">Tax Number:</strong>
+                                    <span style="color: #2d3748; font-family: monospace;">{{ $restaurant->tax_number }}</span>
                                 </div>
                             @endif
                             @if($restaurant->license_number)

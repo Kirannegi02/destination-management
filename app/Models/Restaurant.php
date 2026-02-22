@@ -21,6 +21,7 @@ class Restaurant extends Model
         'alternate_phone',
         'website',
         'images',
+        'video',
         'star_rating',
         'price',
         'amenities',
@@ -29,7 +30,7 @@ class Restaurant extends Model
         'seating_capacity',
         'description',
         'status',
-        'gst_number',
+        'tax_number',
         'license_number',
         'parking_available',
         'wifi_available',
@@ -55,6 +56,17 @@ class Restaurant extends Model
         'longitude' => 'decimal:8',
         'price' => 'decimal:2',
     ];
+
+    /**
+     * Get full video URL for display/API (handles stored path or external URL)
+     */
+    public function getVideoUrlAttribute(): ?string
+    {
+        if (empty($this->video)) {
+            return null;
+        }
+        return \App\Services\ImageService::getUrl($this->video);
+    }
 
     /**
      * Get formatted price for display (e.g., ₹1,234.00)

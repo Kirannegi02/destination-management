@@ -52,7 +52,7 @@
                         <th>Agency</th>
                         <th>Email</th>
                         <th>Phone</th>
-                        <th>GST Number</th>
+                        <th>Tax Number</th>
                         <th>Location</th>
                         <th>Status</th>
                         <th>Profile</th>
@@ -80,7 +80,7 @@
                             <td>{{ $user->agency_name ?? 'N/A' }}</td>
                             <td>{{ $user->email ?? 'N/A' }}</td>
                             <td>{{ $user->phone ?? 'N/A' }}</td>
-                            <td>{{ $user->gst_number ?? 'N/A' }}</td>
+                            <td>{{ $user->tax_number ?? 'N/A' }}</td>
                             <td>
                                 @if($user->city && $user->state)
                                     {{ $user->city }}, {{ $user->state }}
