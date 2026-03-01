@@ -116,9 +116,16 @@ class DashboardController extends Controller
                 ->select(
                     'b.id',
                     'b.status',
+<<<<<<< HEAD
                     'b.booking_date',
                     'b.booking_time',
                     'b.guests',
+=======
+                    'b.check_in',
+                    'b.check_out',
+                    'b.guests',
+                    'b.rooms',
+>>>>>>> e5334abf5277c6dce091c39f57cc3a9fe20f7167
                     'b.estimated_total',
                     'r.restaurant_name'
                 )
