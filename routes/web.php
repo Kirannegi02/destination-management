@@ -152,6 +152,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Guide bookings (listing only)
         Route::get('/guide-bookings', [\App\Http\Controllers\Admin\GuideBookingController::class, 'index'])->name('guide_bookings.index');
 
+        // Sightseeing bookings
+        Route::get('/sightseeing-bookings', [\App\Http\Controllers\Admin\SightseeingBookingController::class, 'index'])->name('sightseeing-bookings.index');
+        Route::get('/sightseeing-bookings/{id}', [\App\Http\Controllers\Admin\SightseeingBookingController::class, 'show'])->name('sightseeing-bookings.show')->whereNumber('id');
+        Route::post('/sightseeing-bookings/{id}/status', [\App\Http\Controllers\Admin\SightseeingBookingController::class, 'updateStatus'])->name('sightseeing-bookings.status')->whereNumber('id');
+
         // Transport routes (location + vehicle type + price per km)
         Route::prefix('transports')->name('transports.')->group(function () {
             Route::get('/export', [\App\Http\Controllers\Admin\TransportController::class, 'export'])->name('export');

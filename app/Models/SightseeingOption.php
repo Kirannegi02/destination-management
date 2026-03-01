@@ -38,5 +38,10 @@ class SightseeingOption extends Model
     {
         return $this->belongsTo(Sightseeing::class);
     }
+
+    public function bookings()
+    {
+        return $this->hasMany(SightseeingBooking::class, 'sightseeing_option_id');
+    }
 }
 

@@ -79,6 +79,66 @@ class SightseeingController extends Controller
         ]);
     }
 
+    /**
+     * Get price and availability for a sightseeing (and optional option) for a given date and pax count.
+     * Use this after the user selects date and pax to show exact pricing and booking conditions.
+     */
+    public function priceAvailability(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'date' => 'required|date|after_or_equal:today',
+            'pax_count' => 'required|integer|min:1',
+            'sightseeing_option_id' => 'nullable|integer|exists:sightseeing_options,id',
+        ]);
+
+        $sightseeing = Sightseeing::where('status', 'active')->find($id);
+        if (!$sightseeing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sightseeing not found or inactive.',
+            ], 404);
+        }
+
+        $option = null;
+        if (!empty($validated['sightseeing_option_id'])) {
+            $option = SightseeingOption::where('sightseeing_id', $sightseeing->id)
+                ->where('is_active', true)
+                ->find($validated['sightseeing_option_id']);
+            if (!$option) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected sightseeing option not found or inactive.',
+                ], 404);
+            }
+        }
+
+        $paxCount = (int) $validated['pax_count'];
+        $currency = $option ? ($option->currency ?? $sightseeing->currency) : $sightseeing->currency;
+        $basePrice = $option ? $option->base_price : $sightseeing->standard_price;
+        $pricePerPax = $basePrice !== null ? (float) $basePrice : null;
+        $totalPrice = $pricePerPax !== null ? $pricePerPax * $paxCount : null;
+
+        $data = [
+            'sightseeing_id' => $sightseeing->id,
+            'sightseeing_title' => $sightseeing->title,
+            'sightseeing_option_id' => $option?->id,
+            'sightseeing_option_name' => $option?->name,
+            'date' => $validated['date'],
+            'pax_count' => $paxCount,
+            'price_per_pax' => $pricePerPax,
+            'total_price' => $totalPrice,
+            'currency' => $currency ?? 'CHF',
+            'available' => true,
+            'booking_conditions' => $sightseeing->booking_conditions,
+            'availability_notes' => $sightseeing->availability_notes,
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+
     private function transform(Sightseeing $sightseeing): array
     {
         return [
@@ -99,6 +159,8 @@ class SightseeingController extends Controller
             'status' => $sightseeing->status,
             'display_order' => $sightseeing->display_order,
             'image_url' => $sightseeing->image ? ImageService::getUrl($sightseeing->image) : null,
+            'booking_conditions' => $sightseeing->booking_conditions ?? null,
+            'availability_notes' => $sightseeing->availability_notes ?? null,
             'options' => $sightseeing->options->map(function ($opt) use ($sightseeing) {
                 return [
                     'id' => $opt->id,

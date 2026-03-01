@@ -29,16 +29,15 @@ class BookingController extends Controller
             'meal_id' => 'required|exists:meals,id',
             'meal_type' => 'nullable|string|max:100',
             'meal_price_inr' => 'nullable|numeric|min:0',
-            'check_in' => 'required|date|after_or_equal:today',
-            'check_out' => 'required|date|after:check_in',
-            'rooms' => 'required|integer|min:1',
-            'guests' => 'nullable|integer|min:1',
-            'guests_details' => 'required|array|min:1',
+            'date' => 'required|date|after_or_equal:today',
+            'time' => 'required|string|max:20',
+            'guests' => 'required|integer|min:1',
+            'guests_details' => 'nullable|array',
             'guests_details.*.name' => 'required|string|max:255',
             'guests_details.*.country' => 'required|string|max:100',
             'guests_details.*.phone' => 'nullable|string|max:25',
-            'guest_name' => 'nullable|string|max:255', // legacy single guest fields (kept for compatibility)
-            'guest_phone' => 'nullable|string|max:25', // legacy single guest fields (kept for compatibility)
+            'guest_name' => 'nullable|string|max:255',
+            'guest_phone' => 'nullable|string|max:25',
             'special_requests' => 'nullable|string',
         ]);
 
@@ -67,7 +66,7 @@ class BookingController extends Controller
             ], 404);
         }
 
-        $guestCount = $validated['guests'] ?? count($validated['guests_details']);
+        $guestCount = $validated['guests'];
         $mealPrice = $validated['meal_price_inr']
             ?? $meal->price_inr
             ?? $restaurant->price;
@@ -79,13 +78,12 @@ class BookingController extends Controller
             'meal_id' => $meal->id,
             'meal_type' => $validated['meal_type'] ?? $meal->meal_type_label,
             'meal_price_inr' => $mealPrice,
-            'check_in' => $validated['check_in'],
-            'check_out' => $validated['check_out'],
-            'rooms' => $validated['rooms'],
+            'booking_date' => $validated['date'],
+            'booking_time' => $validated['time'],
             'guests' => $guestCount,
             'guest_name' => $validated['guest_name'] ?? null,
             'guest_phone' => $validated['guest_phone'] ?? null,
-            'guests_details' => $validated['guests_details'],
+            'guests_details' => $validated['guests_details'] ?? [],
             'special_requests' => $validated['special_requests'] ?? null,
             'estimated_total' => $estimatedTotal,
             'status' => 'pending',
@@ -169,7 +167,7 @@ class BookingController extends Controller
                 isset($validated['status']) && $validated['status'] !== 'all',
                 fn($q) => $q->where('status', $validated['status'])
             )
-            ->orderBy('check_in', 'desc')
+            ->orderBy('booking_date', 'desc')
             ->paginate($validated['per_page'] ?? 15);
 
         $bookings->getCollection()->transform(function ($booking) {
@@ -200,9 +198,8 @@ class BookingController extends Controller
             'meal_type_key' => $booking->meal?->meal_type,
             'meal_price_inr' => $booking->meal_price_inr ? (float) $booking->meal_price_inr : null,
             'meal_price_inr_formatted' => $booking->meal_price_inr ? '₹' . number_format((float) $booking->meal_price_inr, 2) : null,
-            'check_in' => $booking->check_in?->toISOString(),
-            'check_out' => $booking->check_out?->toISOString(),
-            'rooms' => $booking->rooms,
+            'date' => $booking->booking_date?->format('Y-m-d'),
+            'time' => $booking->booking_time,
             'guests' => $booking->guests,
             'guests_details' => $booking->guests_details,
             'guest_name' => $booking->guest_name,

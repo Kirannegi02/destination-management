@@ -275,9 +275,9 @@
                         <tr>
                             <th>Booking ID</th>
                             <th>Restaurant</th>
-                            <th>Check-In</th>
-                            <th>Check-Out</th>
-                            <th>Guests / Rooms</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Guests</th>
                             <th>Est. Total</th>
                             <th>Status</th>
                         </tr>
@@ -287,9 +287,9 @@
                             <tr>
                                 <td>#{{ $booking->id }}</td>
                                 <td>{{ $booking->restaurant_name ?? 'N/A' }}</td>
-                                <td>{{ $booking->check_in ? \Carbon\Carbon::parse($booking->check_in)->format('Y-m-d H:i') : 'N/A' }}</td>
-                                <td>{{ $booking->check_out ? \Carbon\Carbon::parse($booking->check_out)->format('Y-m-d H:i') : 'N/A' }}</td>
-                                <td>{{ $booking->guests ?? '0' }} / {{ $booking->rooms ?? '0' }}</td>
+                                <td>{{ $booking->booking_date ? \Carbon\Carbon::parse($booking->booking_date)->format('Y-m-d') : 'N/A' }}</td>
+                                <td>{{ $booking->booking_time ?? 'N/A' }}</td>
+                                <td>{{ $booking->guests ?? '0' }}</td>
                                 <td>
                                     @if($booking->estimated_total !== null)
                                         ₹{{ number_format((float) $booking->estimated_total, 2) }}

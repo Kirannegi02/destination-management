@@ -5,33 +5,31 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Booking extends Model
+class SightseeingBooking extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'user_id',
-        'restaurant_id',
-        'meal_id',
-        'meal_type',
-        'meal_price_inr',
+        'sightseeing_id',
+        'sightseeing_option_id',
         'booking_date',
-        'booking_time',
-        'guests',
+        'pax_count',
+        'price',
+        'currency',
         'guest_name',
         'guest_phone',
         'guests_details',
         'special_requests',
+        'booking_conditions_snapshot',
         'status',
-        'estimated_total',
     ];
 
     protected $casts = [
         'booking_date' => 'date',
-        'guests' => 'integer',
+        'pax_count' => 'integer',
+        'price' => 'decimal:2',
         'guests_details' => 'array',
-        'estimated_total' => 'decimal:2',
-        'meal_price_inr' => 'decimal:2',
     ];
 
     public function user()
@@ -39,14 +37,13 @@ class Booking extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function restaurant()
+    public function sightseeing()
     {
-        return $this->belongsTo(Restaurant::class);
+        return $this->belongsTo(Sightseeing::class);
     }
 
-    public function meal()
+    public function sightseeingOption()
     {
-        return $this->belongsTo(Meal::class);
+        return $this->belongsTo(SightseeingOption::class, 'sightseeing_option_id');
     }
 }
-

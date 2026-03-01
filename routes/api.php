@@ -78,7 +78,16 @@ Route::middleware('auth:api')->group(function () {
     // Sightseeing APIs
     Route::prefix('sightseeings')->group(function () {
         Route::get('/', [ApiSightseeingController::class, 'index']);
-        Route::get('/{id}', [ApiSightseeingController::class, 'show']);
+        Route::get('/{id}/price-availability', [ApiSightseeingController::class, 'priceAvailability'])->whereNumber('id');
+        Route::get('/{id}', [ApiSightseeingController::class, 'show'])->whereNumber('id');
+    });
+
+    // Sightseeing booking APIs
+    Route::prefix('sightseeing-bookings')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\SightseeingBookingController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\SightseeingBookingController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\SightseeingBookingController::class, 'show'])->whereNumber('id');
+        Route::post('/{id}/cancel', [\App\Http\Controllers\Api\SightseeingBookingController::class, 'cancel'])->whereNumber('id');
     });
     
     // Meals API routes

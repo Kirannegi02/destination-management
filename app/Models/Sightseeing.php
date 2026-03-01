@@ -42,6 +42,11 @@ class Sightseeing extends Model
         return $this->hasMany(SightseeingOption::class);
     }
 
+    public function bookings()
+    {
+        return $this->hasMany(SightseeingBooking::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
