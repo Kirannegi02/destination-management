@@ -136,7 +136,6 @@
                                 style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
                             <option value="active" {{ old('status', $restaurant->status) == 'active' ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ old('status', $restaurant->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                            <option value="pending" {{ old('status', $restaurant->status) == 'pending' ? 'selected' : '' }}>Pending</option>
                         </select>
                         @error('status')
                             <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
@@ -355,10 +354,43 @@
             <!-- Restaurant Video Section -->
             <div style="margin-bottom: 30px;">
                 <h3 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 20px;">Restaurant Video</h3>
-                @if($restaurant->video_url)
-                    <div style="margin-bottom: 16px; padding: 12px; background: #f7fafc; border-radius: 8px;">
-                        <p style="color: #4a5568; font-size: 14px; margin-bottom: 8px;"><strong>Current video:</strong></p>
-                        <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+                @if($restaurant->video)
+                    @php
+                        $rawVideo = $restaurant->video;
+                        $videoPlayUrl = $restaurant->video_url;
+                        $embedSrc = null;
+                        if (str_starts_with($rawVideo, 'http')) {
+                            if (str_contains($rawVideo, 'youtube.com/embed/')) {
+                                $embedSrc = $rawVideo;
+                            } elseif (preg_match('/youtube\.com\/watch\?v=([^&]+)/', $rawVideo, $m)) {
+                                $embedSrc = 'https://www.youtube.com/embed/' . $m[1];
+                            } elseif (preg_match('/youtu\.be\/([^?&]+)/', $rawVideo, $m)) {
+                                $embedSrc = 'https://www.youtube.com/embed/' . $m[1];
+                            } elseif (preg_match('~vimeo\.com/(?:video/)?(\d+)~', $rawVideo, $m)) {
+                                $embedSrc = 'https://player.vimeo.com/video/' . $m[1];
+                            }
+                        }
+                    @endphp
+                    <div style="margin-bottom: 20px; padding: 16px; background: #f7fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <p style="color: #2d3748; font-size: 14px; margin-bottom: 12px; font-weight: 600;">Current video (preview)</p>
+                        <div style="max-width: 720px; margin-bottom: 12px; border-radius: 8px; overflow: hidden; background: #000;">
+                            @if($embedSrc)
+                                <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+                                    <iframe src="{{ $embedSrc }}"
+                                            title="Restaurant video"
+                                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowfullscreen></iframe>
+                                </div>
+                            @else
+                                <video controls playsinline preload="metadata"
+                                       style="width: 100%; max-height: 400px; display: block;"
+                                       src="{{ $videoPlayUrl }}">
+                                    Your browser does not support the video tag.
+                                </video>
+                            @endif
+                        </div>
+                        <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 8px;">
                             <input type="checkbox" name="video_remove" value="1">
                             <span style="color: #e53e3e;">Remove current video</span>
                         </label>

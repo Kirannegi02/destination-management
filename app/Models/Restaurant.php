@@ -119,5 +119,13 @@ class Restaurant extends Model
     {
         return $this->hasMany(Meal::class)->where('status', 'active');
     }
+
+    /**
+     * Restaurant table bookings (orders) placed by users/agents.
+     */
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
 }
 

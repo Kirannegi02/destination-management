@@ -51,6 +51,12 @@ Route::post('/transports/quote', [\App\Http\Controllers\Api\TransportQuoteContro
 Route::post('/transports/quote-request', [\App\Http\Controllers\Api\TransportQuoteController::class, 'store']);
 Route::post('/transport-bookings', [\App\Http\Controllers\Api\TransportQuoteController::class, 'store']);
 
+// Public souvenir list (no authentication required) – filter by country
+Route::prefix('souvenirs')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\SouvenirController::class, 'index']);
+    Route::get('/{id}', [\App\Http\Controllers\Api\SouvenirController::class, 'show'])->whereNumber('id');
+});
+
 // Public restaurant routes (no authentication required)
 Route::prefix('restaurants')->group(function () {
     // Get list of restaurants with filters (public)
@@ -111,6 +117,21 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/', [\App\Http\Controllers\Api\BookingController::class, 'store']);
         Route::post('/{id}/cancel', [\App\Http\Controllers\Api\BookingController::class, 'cancel']);
     });
+
+    // Souvenir orders & addresses
+    Route::prefix('addresses')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\UserAddressController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\UserAddressController::class, 'store']);
+    });
+    Route::prefix('souvenir-orders')->group(function () {
+        Route::post('/preview', [\App\Http\Controllers\Api\SouvenirOrderController::class, 'preview']);
+        Route::get('/', [\App\Http\Controllers\Api\SouvenirOrderController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\SouvenirOrderController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\SouvenirOrderController::class, 'show'])->whereNumber('id');
+        Route::post('/{id}/cancel', [\App\Http\Controllers\Api\SouvenirOrderController::class, 'cancel'])->whereNumber('id');
+    });
+    // Souvenir restock requests (low stock / below minimum order quantity)
+    Route::post('/souvenirs/{id}/restock-request', [\App\Http\Controllers\Api\SouvenirRestockController::class, 'store'])->whereNumber('id');
     // User profile routes
     Route::prefix('profile')->group(function () {
         // Get profile

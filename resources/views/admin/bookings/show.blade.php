@@ -107,9 +107,9 @@
                 <p>{{ $booking->booking_time ?? 'N/A' }}</p>
             </div>
             <div style="background: #f7fafc; padding: 16px; border-radius: 8px;">
-                <h4 style="margin-bottom: 8px; color: #2d3748;">Guests</h4>
-                <p>{{ $booking->guests }}</p>
-            </div>
+                <h4 style="margin-bottom: 8px; color: #2d3748;">Number of guests</h4>
+                <p style="font-size: 22px; font-weight: 700; color: #2d3748; margin: 0;">{{ $booking->number_of_guests ?? $booking->guests ?? '—' }}</p>
+                </div>
             <div style="background: #f7fafc; padding: 16px; border-radius: 8px;">
                 <h4 style="margin-bottom: 8px; color: #2d3748;">Status</h4>
                 <p style="font-weight: 600;">{{ ucfirst($booking->status) }}</p>

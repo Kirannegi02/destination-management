@@ -171,6 +171,9 @@
                 <button class="tab-button" onclick="switchTab(event, 'razorpay')">
                     💳 Payment Configurations
                 </button>
+                <button class="tab-button" onclick="switchTab(event, 'souvenir-shipping')">
+                    🚚 Souvenir Shipping
+                </button>
                 <button class="tab-button" onclick="switchTab(event, 'guide-cms')">
                     🌍 Guide CMS
                 </button>
@@ -535,6 +538,92 @@
 
                     <div style="margin-top: 30px;">
                         <button type="submit" class="btn-save">Save Payment Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Souvenir Shipping Settings Tab -->
+        <div id="souvenir-shipping-tab" class="tab-content">
+            <div class="settings-form">
+                <div class="info-box">
+                    <strong>Souvenir Shipping Configuration</strong>
+                    <p>
+                        Configure dynamic shipping charges for souvenir orders. 
+                        Shipping is calculated as <strong>distance (km) × per‑km rate</strong>, unless free shipping is applied.
+                        Free shipping applies only when the order is within the same city and country as the souvenir and the subtotal exceeds the configured minimum.
+                    </p>
+                </div>
+
+                <form action="{{ route('admin.settings.souvenir_shipping.update') }}" method="POST">
+                    @csrf
+
+                    <div class="form-section">
+                        <h3 class="form-section-title">Free Shipping Rule</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>
+                                    Minimum order amount for free shipping (EUR / CHF) <span class="required">*</span>
+                                </label>
+                                <input type="number"
+                                       name="souvenir_free_shipping_min_amount"
+                                       value="{{ old('souvenir_free_shipping_min_amount', $souvenirShippingSettings['souvenir_free_shipping_min_amount']) }}"
+                                       step="0.01"
+                                       min="0"
+                                       required>
+                                <div class="form-help">
+                                    If the order is within city and subtotal is greater than or equal to this amount, shipping is free.
+                                </div>
+                                @error('souvenir_free_shipping_min_amount')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 5px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="form-section-title">Distance Based Charges</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>
+                                    Per‑kilometer rate (EUR / CHF per km) <span class="required">*</span>
+                                </label>
+                                <input type="number"
+                                       name="souvenir_per_km_rate"
+                                       value="{{ old('souvenir_per_km_rate', $souvenirShippingSettings['souvenir_per_km_rate']) }}"
+                                       step="0.01"
+                                       min="0"
+                                       required>
+                                <div class="form-help">
+                                    Shipping cost = distance (in km) × this rate, when free shipping is not applied.
+                                </div>
+                                @error('souvenir_per_km_rate')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 5px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    Fallback base shipping charge (EUR / CHF) <span class="required">*</span>
+                                </label>
+                                <input type="number"
+                                       name="souvenir_base_shipping_charge"
+                                       value="{{ old('souvenir_base_shipping_charge', $souvenirShippingSettings['souvenir_base_shipping_charge']) }}"
+                                       step="0.01"
+                                       min="0"
+                                       required>
+                                <div class="form-help">
+                                    Used only when distance (km) is not provided by the client.
+                                </div>
+                                @error('souvenir_base_shipping_charge')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 5px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <button type="submit" class="btn-save">Save Souvenir Shipping Settings</button>
                     </div>
                 </form>
             </div>

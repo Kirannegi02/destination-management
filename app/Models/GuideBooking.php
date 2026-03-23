@@ -20,7 +20,6 @@ class GuideBooking extends Model
         'guests',
         'start_location',
         'end_location',
-        'start_time_slot',
         'status',
         'special_requests',
         'price',

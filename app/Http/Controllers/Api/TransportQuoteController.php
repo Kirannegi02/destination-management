@@ -108,6 +108,11 @@ class TransportQuoteController extends Controller
             $rules['guest_name'] = 'required|string|max:255';
             $rules['guest_email'] = 'required|email';
             $rules['guest_phone'] = 'required|string|max:50';
+        } elseif ($user->status === 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your agent account is pending verification. You cannot submit transport quote requests until you are approved by admin.',
+            ], 403);
         }
 
         $validated = $request->validate($rules);

@@ -63,7 +63,7 @@
                 <h3 style="margin-bottom: 10px; color: #2d3748;">Template & columns</h3>
                 <p style="color: #4a5568; font-size: 14px; margin-bottom: 10px;">
                     Required columns: <strong>restaurant_name</strong>, <strong>address</strong>, <strong>phone</strong>, <strong>status</strong>.
-                    Status must be one of: active, inactive, pending.
+                    Status must be one of: active, inactive.
                     Use Yes/No or 1/0 for boolean fields.
                 </p>
                 <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; color: #2d3748; font-size: 14px;">

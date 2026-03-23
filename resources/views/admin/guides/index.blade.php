@@ -45,10 +45,6 @@
                        class="status-tab {{ request('status') == 'inactive' ? 'status-tab--active' : 'status-tab--inactive' }}">
                         Inactive ({{ $inactiveCount }})
                     </a>
-                    <a href="{{ route('admin.guides.index', ['status' => 'pending']) }}"
-                       class="status-tab {{ request('status') == 'pending' ? 'status-tab--active' : 'status-tab--inactive' }}">
-                        Pending ({{ $pendingCount }})
-                    </a>
                 </div>
             </div>
         </div>
@@ -135,21 +131,14 @@
                                 @endif
                             </td>
                             <td>
-                                @if($guide->price)
-                                    ₹{{ number_format($guide->price, 2) }}
-                                @elseif($guide->base_price)
-                                    ₹{{ number_format($guide->base_price, 2) }}
-                                @else
-                                    —
-                                @endif
+                                HD: {{ $guide->half_day_price ? '₹'.number_format($guide->half_day_price, 2) : '—' }}<br>
+                                FD: {{ $guide->full_day_price ? '₹'.number_format($guide->full_day_price, 2) : '—' }}
                             </td>
                             <td>
                                 @if($guide->status === 'active')
                                     <span class="badge badge-success">Active</span>
-                                @elseif($guide->status === 'inactive')
-                                    <span class="badge badge-danger">Inactive</span>
                                 @else
-                                    <span class="badge" style="background:#fbbf24; color:white;">Pending</span>
+                                    <span class="badge badge-danger">Inactive</span>
                                 @endif
                             </td>
                             <td>

@@ -12,9 +12,19 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Add new date/time columns only if they don't already exist
         Schema::table('bookings', function (Blueprint $table) {
-            $table->date('booking_date')->nullable()->after('meal_price_inr');
-            $table->string('booking_time', 20)->nullable()->after('booking_date');
+            if (!Schema::hasColumn('bookings', 'booking_date')) {
+                $table->date('booking_date')->nullable()->after('meal_price_inr');
+            }
+            if (!Schema::hasColumn('bookings', 'booking_time')) {
+                $table->string('booking_time', 20)->nullable()->after('booking_date');
+            }
+        });
+
+        // Drop foreign key first so MySQL allows dropping the composite index
+        Schema::table('bookings', function (Blueprint $table) {
+            $table->dropForeign(['restaurant_id']);
         });
 
         Schema::table('bookings', function (Blueprint $table) {
@@ -29,6 +39,7 @@ return new class extends Migration
 
         Schema::table('bookings', function (Blueprint $table) {
             $table->index(['restaurant_id', 'booking_date']);
+            $table->foreign('restaurant_id')->references('id')->on('restaurants')->onDelete('cascade');
         });
     }
 

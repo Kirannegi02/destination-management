@@ -62,7 +62,7 @@ return new class extends Migration
             $table->decimal('longitude', 11, 8)->nullable();
             
             // Status
-            $table->enum('status', ['active', 'inactive', 'pending'])->default('active');
+            $table->enum('status', ['active', 'inactive'])->default('active');
             
             $table->timestamps();
             

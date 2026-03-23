@@ -29,7 +29,9 @@ class GuideController extends Controller
         'start_time',
         'end_time',
         'duration_hours',
-        'price',
+        'half_day_price',
+        'full_day_price',
+        'extra_hour_price',
         'status',
         'notes',
     ];
@@ -87,7 +89,6 @@ class GuideController extends Controller
         $allCount = Guide::count();
         $activeCount = Guide::where('status', 'active')->count();
         $inactiveCount = Guide::where('status', 'inactive')->count();
-        $pendingCount = Guide::where('status', 'pending')->count();
 
         return view('admin.guides.index', compact(
             'guides',
@@ -95,8 +96,7 @@ class GuideController extends Controller
             'languages',
             'allCount',
             'activeCount',
-            'inactiveCount',
-            'pendingCount'
+            'inactiveCount'
         ));
     }
 
@@ -213,8 +213,10 @@ class GuideController extends Controller
                 'start_time' => 'nullable|date_format:H:i',
                 'end_time' => 'nullable|date_format:H:i',
                 'duration_hours' => 'nullable|integer|min:1|max:72',
-                'price' => 'nullable|numeric|min:0',
-                'status' => 'required|in:active,inactive,pending',
+                'half_day_price' => 'nullable|numeric|min:0',
+                'full_day_price' => 'nullable|numeric|min:0',
+                'extra_hour_price' => 'nullable|numeric|min:0',
+                'status' => 'required|in:active,inactive',
                 'notes' => 'nullable|string',
             ]);
 
@@ -480,7 +482,7 @@ class GuideController extends Controller
             $payload[$column] = $this->normalizeValue($column, $value);
         }
         if (empty($payload['status'])) {
-            $payload['status'] = 'pending';
+            $payload['status'] = 'active';
         }
         return $payload;
     }
@@ -498,14 +500,14 @@ class GuideController extends Controller
 
         if ($column === 'status') {
             $value = strtolower((string) $value);
-            return in_array($value, ['active', 'inactive', 'pending'], true) ? $value : 'pending';
+            return in_array($value, ['active', 'inactive'], true) ? $value : 'active';
         }
 
         if ($column === 'duration_hours') {
             return is_numeric($value) ? (int) $value : null;
         }
 
-        if ($column === 'price') {
+        if (in_array($column, ['half_day_price', 'full_day_price', 'extra_hour_price'], true)) {
             return is_numeric($value) ? (float) $value : null;
         }
 
@@ -544,7 +546,9 @@ class GuideController extends Controller
                 $guide->start_time ? $guide->start_time->format('H:i') : null,
                 $guide->end_time ? $guide->end_time->format('H:i') : null,
                 $guide->duration_hours,
-                $guide->price,
+                $guide->half_day_price,
+                $guide->full_day_price,
+                $guide->extra_hour_price,
                 $guide->status,
                 $guide->notes,
             ];
@@ -590,6 +594,8 @@ class GuideController extends Controller
                 '13:00',
                 3,
                 1500,
+                2800,
+                450,
                 'active',
                 'Arrive 10 minutes early at meeting point.',
             ],
@@ -615,37 +621,16 @@ class GuideController extends Controller
             'description' => 'nullable|string',
             'country' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
-            'operating_areas' => 'nullable',
-            'meeting_points' => 'nullable',
-            'dropoff_points' => 'nullable',
             'language' => 'nullable|string|max:100',
             'primary_language' => 'nullable|string|max:100',
             'other_languages' => 'nullable',
             'language_proficiency' => 'nullable|string|max:50',
-            'service_date' => 'nullable|date',
             'available_days' => 'nullable',
             'available_from_date' => 'nullable|date',
             'available_to_date' => 'nullable|date|after_or_equal:available_from_date',
-            'start_point' => 'nullable|string|max:255',
-            'default_start_location' => 'nullable|string|max:255',
-            'end_point' => 'nullable|string|max:255',
-            'default_end_location' => 'nullable|string|max:255',
-            'start_time' => 'nullable|date_format:H:i',
             'daily_start_time' => 'nullable|date_format:H:i',
-            'end_time' => 'nullable|date_format:H:i',
             'daily_end_time' => 'nullable|date_format:H:i',
-            'start_time_slots' => 'nullable',
-            'end_time_auto_calculated' => 'nullable|boolean',
-            'duration_hours' => 'nullable|integer|min:1|max:72',
-            'blackout_dates' => 'nullable',
-            'price' => 'nullable|numeric|min:0',
-            'base_price' => 'nullable|numeric|min:0',
-            'peak_season_price' => 'nullable|numeric|min:0',
-            'off_season_price' => 'nullable|numeric|min:0',
-            'weekend_price' => 'nullable|numeric|min:0',
-            'festival_surcharge' => 'nullable|numeric|min:0',
-            'child_discount' => 'nullable|numeric|min:0|max:100',
-            'status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
+            'status' => ['required', Rule::in(['active', 'inactive'])],
             'notes' => 'nullable|string',
             'max_bookings_per_day' => 'nullable|integer|min:1|max:500',
             'id_proof_type' => 'nullable|string|max:100',
@@ -653,33 +638,21 @@ class GuideController extends Controller
             'id_proof_upload' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:8192',
             'license_upload' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:8192',
             'police_verification' => 'nullable|boolean',
-            'verification_status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
+            'verification_status' => ['nullable', Rule::in(['approved', 'rejected'])],
             'experience_indian_customers' => 'nullable|boolean',
             'indian_tours_completed' => 'nullable|integer|min:0',
             'indian_language_support' => 'nullable',
             'indian_special_notes' => 'nullable|string',
-            'average_rating' => 'nullable|numeric|min:0|max:5',
-            'total_bookings_completed' => 'nullable|integer|min:0',
-            'cancellation_count' => 'nullable|integer|min:0',
-            'customer_feedback' => 'nullable|string',
-            'admin_notes' => 'nullable|string',
             'display_on_website' => 'nullable|boolean',
             'featured_guide' => 'nullable|boolean',
-            'profile_priority_order' => 'nullable|integer',
         ];
 
         $validated = $request->validate($rules);
 
         $data = array_merge($validated, [
-            'operating_areas' => $this->normalizeList($request->input('operating_areas')),
-            'meeting_points' => $this->normalizeList($request->input('meeting_points')),
-            'dropoff_points' => $this->normalizeList($request->input('dropoff_points')),
             'other_languages' => $this->normalizeList($request->input('other_languages')),
             'available_days' => $this->normalizeList($request->input('available_days')),
-            'blackout_dates' => $this->normalizeList($request->input('blackout_dates')),
-            'start_time_slots' => $this->normalizeList($request->input('start_time_slots')),
             'indian_language_support' => $this->normalizeList($request->input('indian_language_support')),
-            'end_time_auto_calculated' => $request->boolean('end_time_auto_calculated'),
             'police_verification' => $request->boolean('police_verification'),
             'experience_indian_customers' => $request->boolean('experience_indian_customers'),
             'display_on_website' => $request->boolean('display_on_website', true),
@@ -748,13 +721,30 @@ class GuideController extends Controller
         $packages = $request->input('packages', []);
         $cleanPackages = collect($packages)
             ->filter(fn($pkg) => !empty($pkg['service_name']) || !empty($pkg['service_type']))
-            ->map(fn($pkg) => $this->buildPackagePayload($pkg))
             ->values();
 
-        $guide->packages()->delete();
+        $existingPackages = $guide->packages()->get()->keyBy('id');
+        $keptIds = [];
 
-        foreach ($cleanPackages as $payload) {
-            $guide->packages()->create($payload);
+        foreach ($cleanPackages as $pkg) {
+            $payload = $this->buildPackagePayload($pkg);
+            $incomingId = isset($pkg['id']) && $pkg['id'] !== '' ? (int) $pkg['id'] : null;
+
+            if ($incomingId && $existingPackages->has($incomingId)) {
+                $existingPackages[$incomingId]->update($payload);
+                $keptIds[] = $incomingId;
+                continue;
+            }
+
+            $new = $guide->packages()->create($payload);
+            $keptIds[] = $new->id;
+        }
+
+        // Remove packages deleted from the form, while preserving updated ones.
+        if (!empty($keptIds)) {
+            $guide->packages()->whereNotIn('id', $keptIds)->delete();
+        } else {
+            $guide->packages()->delete();
         }
     }
 
@@ -764,13 +754,17 @@ class GuideController extends Controller
             'service_type' => $pkg['service_type'] ?? null,
             'service_name' => $pkg['service_name'] ?? null,
             'duration_hours' => isset($pkg['duration_hours']) && $pkg['duration_hours'] !== '' ? (int) $pkg['duration_hours'] : null,
-            'includes_lunch' => !empty($pkg['includes_lunch']),
-            'includes_dinner' => !empty($pkg['includes_dinner']),
-            'description' => $pkg['description'] ?? null,
             'standard_price' => isset($pkg['standard_price']) && $pkg['standard_price'] !== '' ? (float) $pkg['standard_price'] : null,
             'extra_hour_price' => isset($pkg['extra_hour_price']) && $pkg['extra_hour_price'] !== '' ? (float) $pkg['extra_hour_price'] : null,
+            'default_start_location' => $pkg['default_start_location'] ?? null,
+            'default_end_location' => $pkg['default_end_location'] ?? null,
+            'start_point' => $pkg['start_point'] ?? null,
+            'end_point' => $pkg['end_point'] ?? null,
+            'start_time' => $pkg['start_time'] ?? null,
+            'end_time' => $pkg['end_time'] ?? null,
+            'notes' => $pkg['notes'] ?? null,
+            'status' => ($pkg['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active',
             'currency' => $pkg['currency'] ?? 'INR',
-            'active' => array_key_exists('active', $pkg) ? (bool) $pkg['active'] : true,
         ];
     }
 }

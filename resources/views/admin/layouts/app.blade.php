@@ -395,6 +395,16 @@
                 <a href="{{ route('admin.sightseeing-bookings.index') }}" class="menu-item {{ $isSightseeingBookingsActive ? 'active' : '' }}">
                     🏔️ Sightseeing Bookings
                 </a>
+                @php
+                    $isSouvenirOrdersTopActive = request()->routeIs('admin.souvenir-orders.*');
+                    $isTransportRequestsTopActive = request()->routeIs('admin.transport-bookings.*');
+                @endphp
+                <a href="{{ route('admin.souvenir-orders.index') }}" class="menu-item {{ $isSouvenirOrdersTopActive ? 'active' : '' }}">
+                    🎁 Souvenir Orders
+                </a>
+                <a href="{{ route('admin.transport-bookings.index') }}" class="menu-item {{ $isTransportRequestsTopActive ? 'active' : '' }}">
+                    🚗 Transport Requests
+                </a>
 
                 @php
                     $isGuidesActive = request()->routeIs('admin.guides.*');
@@ -495,7 +505,7 @@
                 </a>
                 
                 @php
-                    $isTransportActive = request()->routeIs('admin.transports.*') || request()->routeIs('admin.vehicles.*') || request()->routeIs('admin.location-distances.*') || request()->routeIs('admin.transport-bookings.*');
+                    $isTransportActive = request()->routeIs('admin.transports.*') || request()->routeIs('admin.vehicles.*');
                     $transportCreateActive = request()->routeIs('admin.transports.create');
                     $transportIndexActive = request()->routeIs('admin.transports.index');
                     $vehicleCreateActive = request()->routeIs('admin.vehicles.create');
@@ -540,19 +550,42 @@
                        class="submenu-item {{ request()->routeIs('admin.transports.export*') ? 'active' : '' }}">
                         ⬇️ Transport Export
                     </a>
-                    <a href="{{ route('admin.location-distances.index') }}" 
-                       class="submenu-item {{ request()->routeIs('admin.location-distances.*') ? 'active' : '' }}">
-                        📍 Location Distances
+                </div>
+
+                @php
+                    $souvenirMenuActive = request()->routeIs('admin.souvenirs.*');
+                    $souvenirCreateActive = request()->routeIs('admin.souvenirs.create');
+                    $souvenirIndexActive = request()->routeIs('admin.souvenirs.index');
+                    $souvenirImportActive = request()->routeIs('admin.souvenirs.import*');
+                    $souvenirExportActive = request()->routeIs('admin.souvenirs.export*');
+                @endphp
+                <div class="menu-item has-submenu {{ $souvenirMenuActive ? 'active' : '' }}"
+                     onclick="toggleSubmenu(this)"
+                     style="cursor: pointer;">
+                    🎁 Souvenirs
+                    <span class="submenu-arrow" style="float: right; margin-top: 2px;">{{ $souvenirMenuActive ? '▼' : '▶' }}</span>
+                </div>
+                <div class="submenu {{ $souvenirMenuActive ? 'expanded' : '' }}">
+                    <a href="{{ route('admin.souvenirs.create') }}"
+                       class="submenu-item {{ $souvenirCreateActive ? 'active' : '' }}">
+                        ➕ Add Souvenir
                     </a>
-                    <a href="{{ route('admin.transport-bookings.index') }}" 
-                       class="submenu-item {{ request()->routeIs('admin.transport-bookings.*') ? 'active' : '' }}">
-                        📋 Quote Requests
+                    <a href="{{ route('admin.souvenirs.index') }}"
+                       class="submenu-item {{ $souvenirIndexActive ? 'active' : '' }}">
+                        📋 All Souvenirs
+                    </a>
+                    <a href="{{ route('admin.souvenirs.import.form') }}"
+                       class="submenu-item {{ $souvenirImportActive ? 'active' : '' }}">
+                        ⬆️ Bulk Import
+                    </a>
+                    <a href="{{ route('admin.souvenirs.export.page') }}"
+                       class="submenu-item {{ $souvenirExportActive ? 'active' : '' }}">
+                        ⬇️ Bulk Export
                     </a>
                 </div>
 
                 @php
                     $serviceTypes = [
-                        'souvenir' => ['icon' => '🎁', 'label' => 'Souvenirs'],
                         'private_venue' => ['icon' => '🏰', 'label' => 'Private Venues'],
                         'catering' => ['icon' => '🍴', 'label' => 'Catering'],
                         'train' => ['icon' => '🚂', 'label' => 'Trains'],

@@ -93,8 +93,9 @@
                     </div>
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Currency</label>
-                        <input type="text" name="currency" value="{{ old('currency', 'CHF') }}" maxlength="8"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                        <input type="text" value="INR" disabled
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background-color:#edf2f7;">
+                        <input type="hidden" name="currency" value="INR">
                     </div>
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Default Pax</label>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
 
 class SettingController extends Controller
@@ -56,7 +57,20 @@ class SettingController extends Controller
             'trust_badges' => Setting::get('guide_cms_trust_badges', []),
         ];
 
-        return view('admin.settings.index', compact('smtpSettings', 'firebaseSettings', 'razorpaySettings', 'guideCmsSettings'));
+        // Souvenir shipping settings
+        $souvenirShippingSettings = [
+            'souvenir_free_shipping_min_amount' => Setting::get('souvenir_free_shipping_min_amount', config('souvenir.free_shipping_min_amount')),
+            'souvenir_per_km_rate' => Setting::get('souvenir_per_km_rate', 1.0),
+            'souvenir_base_shipping_charge' => Setting::get('souvenir_base_shipping_charge', config('souvenir.default_shipping_charge')),
+        ];
+
+        return view('admin.settings.index', compact(
+            'smtpSettings',
+            'firebaseSettings',
+            'razorpaySettings',
+            'guideCmsSettings',
+            'souvenirShippingSettings'
+        ));
     }
 
     /**
@@ -100,6 +114,13 @@ class SettingController extends Controller
 
         // Update .env file or config
         $this->updateEnvConfig($request->all(), 'smtp');
+
+        try {
+            Artisan::call('config:clear');
+            Artisan::call('cache:clear');
+        } catch (\Throwable $e) {
+            // ignore on restricted hosting
+        }
 
         return redirect()->route('admin.settings.index')
             ->with('success', 'SMTP settings updated successfully.');
@@ -210,6 +231,25 @@ class SettingController extends Controller
     }
 
     /**
+     * Update souvenir shipping settings.
+     */
+    public function updateSouvenirShipping(Request $request)
+    {
+        $validated = Validator::make($request->all(), [
+            'souvenir_free_shipping_min_amount' => 'required|numeric|min:0',
+            'souvenir_per_km_rate' => 'required|numeric|min:0',
+            'souvenir_base_shipping_charge' => 'required|numeric|min:0',
+        ])->validate();
+
+        Setting::set('souvenir_free_shipping_min_amount', $validated['souvenir_free_shipping_min_amount']);
+        Setting::set('souvenir_per_km_rate', $validated['souvenir_per_km_rate']);
+        Setting::set('souvenir_base_shipping_charge', $validated['souvenir_base_shipping_charge']);
+
+        return redirect()->route('admin.settings.index')
+            ->with('success', 'Souvenir shipping settings updated successfully.');
+    }
+
+    /**
      * Update environment configuration.
      */
     private function updateEnvConfig($data, $type)
@@ -223,15 +263,36 @@ class SettingController extends Controller
         $envContent = file_get_contents($envFile);
 
         if ($type === 'smtp') {
-            $envContent = preg_replace('/^MAIL_HOST=.*/m', 'MAIL_HOST=' . $data['smtp_host'], $envContent);
-            $envContent = preg_replace('/^MAIL_PORT=.*/m', 'MAIL_PORT=' . $data['smtp_port'], $envContent);
-            $envContent = preg_replace('/^MAIL_USERNAME=.*/m', 'MAIL_USERNAME=' . $data['smtp_username'], $envContent);
-            $envContent = preg_replace('/^MAIL_PASSWORD=.*/m', 'MAIL_PASSWORD=' . $data['smtp_password'], $envContent);
-            $envContent = preg_replace('/^MAIL_ENCRYPTION=.*/m', 'MAIL_ENCRYPTION=' . $data['smtp_encryption'], $envContent);
-            $envContent = preg_replace('/^MAIL_FROM_ADDRESS=.*/m', 'MAIL_FROM_ADDRESS=' . $data['smtp_from_email'], $envContent);
-            $envContent = preg_replace('/^MAIL_FROM_NAME=.*/m', 'MAIL_FROM_NAME="' . $data['smtp_from_name'] . '"', $envContent);
+            $envContent = $this->setEnvValue($envContent, 'MAIL_HOST', $data['smtp_host'] ?? '');
+            $envContent = $this->setEnvValue($envContent, 'MAIL_PORT', (string)($data['smtp_port'] ?? '587'), false);
+            $envContent = $this->setEnvValue($envContent, 'MAIL_USERNAME', $data['smtp_username'] ?? '');
+
+            $incomingPassword = $data['smtp_password'] ?? null;
+            if (!empty($incomingPassword) && $incomingPassword !== '••••••••') {
+                $envContent = $this->setEnvValue($envContent, 'MAIL_PASSWORD', $incomingPassword);
+            }
+
+            $envContent = $this->setEnvValue($envContent, 'MAIL_ENCRYPTION', $data['smtp_encryption'] ?? '');
+            $envContent = $this->setEnvValue($envContent, 'MAIL_FROM_ADDRESS', $data['smtp_from_email'] ?? '');
+            $envContent = $this->setEnvValue($envContent, 'MAIL_FROM_NAME', $data['smtp_from_name'] ?? '');
         }
 
         file_put_contents($envFile, $envContent);
+    }
+
+    private function setEnvValue(string $envContent, string $key, string $value, bool $quote = true): string
+    {
+        $line = $key . '=' . ($quote ? $this->quoteEnvValue($value) : $value);
+        $pattern = '/^' . preg_quote($key, '/') . '=.*/m';
+        if (preg_match($pattern, $envContent)) {
+            return preg_replace($pattern, $line, $envContent);
+        }
+        return rtrim($envContent) . PHP_EOL . $line . PHP_EOL;
+    }
+
+    private function quoteEnvValue(string $value): string
+    {
+        $escaped = str_replace(['\\', '"'], ['\\\\', '\\"'], $value);
+        return '"' . $escaped . '"';
     }
 }

@@ -60,10 +60,9 @@
 
             <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
                 <h4 style="margin-bottom:8px; color:#2d3748;">Pricing</h4>
-                <p style="color:#4a5568;">Standard: <strong>{{ $guide->price ? '₹'.number_format($guide->price,2) : 'N/A' }}</strong></p>
-                <p style="color:#4a5568;">Base / Peak: <strong>{{ $guide->base_price ?? '—' }} / {{ $guide->peak_season_price ?? '—' }}</strong></p>
-                <p style="color:#4a5568;">Off / Weekend: <strong>{{ $guide->off_season_price ?? '—' }} / {{ $guide->weekend_price ?? '—' }}</strong></p>
-                <p style="color:#4a5568;">Festival: <strong>{{ $guide->festival_surcharge ?? '—' }}</strong> | Child Discount: <strong>{{ $guide->child_discount ? $guide->child_discount.'%' : '—' }}</strong></p>
+                <p style="color:#4a5568;">Half Day: <strong>{{ $guide->half_day_price ? '₹'.number_format($guide->half_day_price,2) : 'N/A' }}</strong></p>
+                <p style="color:#4a5568;">Full Day: <strong>{{ $guide->full_day_price ? '₹'.number_format($guide->full_day_price,2) : 'N/A' }}</strong></p>
+                <p style="color:#4a5568;">Extra Hour: <strong>{{ $guide->extra_hour_price ? '₹'.number_format($guide->extra_hour_price,2) : 'N/A' }}</strong></p>
             </div>
         </div>
 
@@ -76,7 +75,6 @@
                             <strong>{{ $package->service_name ?? 'Package' }}</strong>
                             <div style="color:#4a5568; font-size:13px; margin-top:6px;">
                                 <div>Type: {{ strtoupper($package->service_type) ?: 'N/A' }} • {{ $package->duration_hours ?? '—' }} hrs</div>
-                                <div>Price: {{ $package->standard_price ? '₹'.number_format($package->standard_price,2) : '—' }} (extra hr: {{ $package->extra_hour_price ?? '—' }})</div>
                                 <div>Includes: {{ $package->includes_lunch ? 'Lunch ' : '' }}{{ $package->includes_dinner ? 'Dinner' : '' }}</div>
                                 <div>Status: {{ $package->active ? 'Active' : 'Inactive' }}</div>
                             </div>

@@ -109,6 +109,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // User (Agents) routes
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class)->except(['show']);
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'show'])
+            ->whereNumber('user')
+            ->name('users.show');
         
         // Restaurant routes
         Route::prefix('restaurants')->name('restaurants.')->group(function () {
@@ -149,8 +152,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/import/sample', [\App\Http\Controllers\Admin\SightseeingController::class, 'sample'])->name('import.sample');
         });
 
-        // Guide bookings (listing only)
+        // Guide bookings
         Route::get('/guide-bookings', [\App\Http\Controllers\Admin\GuideBookingController::class, 'index'])->name('guide_bookings.index');
+        Route::get('/guide-bookings/{id}', [\App\Http\Controllers\Admin\GuideBookingController::class, 'show'])
+            ->whereNumber('id')
+            ->name('guide-bookings.show');
+        Route::post('/guide-bookings/{id}/status', [\App\Http\Controllers\Admin\GuideBookingController::class, 'updateStatus'])
+            ->whereNumber('id')
+            ->name('guide-bookings.status');
 
         // Sightseeing bookings
         Route::get('/sightseeing-bookings', [\App\Http\Controllers\Admin\SightseeingBookingController::class, 'index'])->name('sightseeing-bookings.index');
@@ -168,9 +177,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('transports', \App\Http\Controllers\Admin\TransportController::class);
         Route::get('/transports', [\App\Http\Controllers\Admin\TransportController::class, 'index'])->name('transports.index');
         Route::get('/transports/{transport}', [\App\Http\Controllers\Admin\TransportController::class, 'show'])->name('transports.show');
-
-        Route::resource('location-distances', \App\Http\Controllers\Admin\LocationDistanceController::class)->except(['show']);
-        Route::get('/location-distances', [\App\Http\Controllers\Admin\LocationDistanceController::class, 'index'])->name('location-distances.index');
 
         Route::get('/transport-bookings', [\App\Http\Controllers\Admin\TransportBookingController::class, 'index'])->name('transport-bookings.index');
         Route::get('/transport-bookings/{id}', [\App\Http\Controllers\Admin\TransportBookingController::class, 'show'])->name('transport-bookings.show')->whereNumber('id');
@@ -192,6 +198,24 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('meals', \App\Http\Controllers\Admin\MealController::class);
         Route::get('/meals', [\App\Http\Controllers\Admin\MealController::class, 'index'])->name('meals.index');
 
+        // Souvenir routes
+        Route::prefix('souvenirs')->name('souvenirs.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\Admin\SouvenirController::class, 'export'])->name('export');
+            Route::get('/export/page', [\App\Http\Controllers\Admin\SouvenirController::class, 'exportPage'])->name('export.page');
+            Route::get('/import', [\App\Http\Controllers\Admin\SouvenirController::class, 'importForm'])->name('import.form');
+            Route::post('/import', [\App\Http\Controllers\Admin\SouvenirController::class, 'import'])->name('import');
+            Route::get('/import/sample', [\App\Http\Controllers\Admin\SouvenirController::class, 'sample'])->name('import.sample');
+        });
+        Route::resource('souvenirs', \App\Http\Controllers\Admin\SouvenirController::class);
+        Route::get('/souvenirs', [\App\Http\Controllers\Admin\SouvenirController::class, 'index'])->name('souvenirs.index');
+        Route::get('/souvenirs/{souvenir}', [\App\Http\Controllers\Admin\SouvenirController::class, 'show'])->name('souvenirs.show');
+
+        // Souvenir orders
+        Route::get('/souvenir-orders', [\App\Http\Controllers\Admin\SouvenirOrderController::class, 'index'])->name('souvenir-orders.index');
+        Route::get('/souvenir-orders/{id}', [\App\Http\Controllers\Admin\SouvenirOrderController::class, 'show'])->name('souvenir-orders.show')->whereNumber('id');
+        Route::get('/souvenir-orders/{id}/invoice', [\App\Http\Controllers\Admin\SouvenirOrderController::class, 'invoice'])->name('souvenir-orders.invoice')->whereNumber('id');
+        Route::post('/souvenir-orders/{id}/status', [\App\Http\Controllers\Admin\SouvenirOrderController::class, 'updateStatus'])->name('souvenir-orders.status')->whereNumber('id');
+
         // Booking routes
         Route::resource('bookings', \App\Http\Controllers\Admin\BookingController::class)->only(['index', 'show']);
         Route::post('/bookings/{booking}/status', [\App\Http\Controllers\Admin\BookingController::class, 'updateStatus'])->name('bookings.status');
@@ -206,6 +230,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/settings/firebase', [\App\Http\Controllers\Admin\SettingController::class, 'updateFirebase'])->name('settings.firebase.update');
         Route::post('/settings/razorpay', [\App\Http\Controllers\Admin\SettingController::class, 'updateRazorpay'])->name('settings.razorpay.update');
         Route::post('/settings/guide-cms', [\App\Http\Controllers\Admin\SettingController::class, 'updateGuideCms'])->name('settings.guide_cms.update');
+        Route::post('/settings/souvenir-shipping', [\App\Http\Controllers\Admin\SettingController::class, 'updateSouvenirShipping'])->name('settings.souvenir_shipping.update');
         
         // Cache management routes
         Route::post('/cache/clear', function () {

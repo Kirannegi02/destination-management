@@ -34,6 +34,16 @@ class Booking extends Model
         'meal_price_inr' => 'decimal:2',
     ];
 
+    /**
+     * Alias for DB column `guests` — number of people for this reservation.
+     */
+    public function getNumberOfGuestsAttribute(): ?int
+    {
+        $g = $this->attributes['guests'] ?? null;
+
+        return $g !== null ? (int) $g : null;
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

@@ -10,7 +10,58 @@
                 <h2 class="card-title" style="margin-bottom: 4px;">Bookings</h2>
                 <p style="color: #718096; font-size: 14px;">All restaurant bookings created by users/agents.</p>
             </div>
+            <form method="GET" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                <div>
+                    <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #4a5568;">
+                        Search
+                    </label>
+                    <input type="text"
+                           name="search"
+                           value="{{ request('search') }}"
+                           placeholder="Name / email / phone / ID"
+                           style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; min-width: 220px; font-size: 14px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #4a5568;">
+                        Booking date
+                    </label>
+                    <input type="date"
+                           name="booking_date"
+                           value="{{ request('booking_date') }}"
+                           style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #4a5568;">
+                        Status
+                    </label>
+                    <select name="status"
+                            style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; min-width: 140px;">
+                        <option value="">All</option>
+                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="confirmed" {{ request('status') === 'confirmed' ? 'selected' : '' }}>Confirmed</option>
+                        <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="submit"
+                            style="padding: 8px 16px; background: #4299e1; color: white; border-radius: 6px; border: none; font-size: 14px; cursor: pointer;">
+                        Filter
+                    </button>
+                    <a href="{{ route('admin.bookings.index') }}"
+                       style="padding: 8px 16px; background: #e2e8f0; color: #4a5568; border-radius: 6px; text-decoration: none; font-size: 14px;">
+                        Reset
+                    </a>
+                </div>
+            </form>
         </div>
+
+        @if(isset($filteredRestaurant) && $filteredRestaurant)
+            <div style="padding: 12px 20px; background: #ebf8ff; border-bottom: 1px solid #bee3f8; color: #2c5282; font-size: 14px;">
+                Showing bookings for <strong>{{ $filteredRestaurant->restaurant_name }}</strong>
+                (ID {{ $filteredRestaurant->id }}).
+                <a href="{{ route('admin.bookings.index') }}" style="margin-left: 8px; color: #2b6cb0;">Clear filter</a>
+            </div>
+        @endif
 
         @if($bookings->count() === 0)
             <div class="empty-state">
@@ -80,7 +131,7 @@
                                 </td>
                                 <td style="padding: 12px;">{{ $booking->booking_date?->format('Y-m-d') ?? 'N/A' }}</td>
                                 <td style="padding: 12px;">{{ $booking->booking_time ?? 'N/A' }}</td>
-                                <td style="padding: 12px;">{{ $booking->guests }}</td>
+                                <td style="padding: 12px;">{{ $booking->number_of_guests ?? $booking->guests ?? '—' }}</td>
                                 <td style="padding: 12px;">
                                     @if($booking->estimated_total !== null)
                                         ₹{{ number_format((float) $booking->estimated_total, 2) }}

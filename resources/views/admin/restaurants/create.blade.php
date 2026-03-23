@@ -135,7 +135,6 @@
                                 style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
                             <option value="active" {{ old('status', 'active') == 'active' ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                            <option value="pending" {{ old('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                         </select>
                         @error('status')
                             <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>

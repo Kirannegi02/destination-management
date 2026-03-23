@@ -4,6 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Booking;
+use App\Models\GuideBooking;
+use App\Models\SightseeingBooking;
+use App\Models\SouvenirOrder;
+use App\Models\TransportBooking;
 use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -155,6 +160,81 @@ class UserController extends Controller
         }
         
         return view('admin.users.edit', compact('user', 'returnStatus'));
+    }
+
+    /**
+     * View a single user (agent) with all their bookings across modules.
+     */
+    public function show(string $id)
+    {
+        $user = User::findOrFail($id);
+
+        $restaurantBookings = Booking::with(['restaurant', 'meal'])
+            ->where('user_id', $user->id)
+            ->orderByDesc('booking_date')
+            ->orderByDesc('created_at')
+            ->take(100)
+            ->get();
+
+        $guideBookings = GuideBooking::with(['guide', 'package'])
+            ->where('user_id', $user->id)
+            ->orderByDesc('service_date')
+            ->orderByDesc('created_at')
+            ->take(100)
+            ->get();
+
+        $sightseeingBookings = SightseeingBooking::with(['sightseeing', 'sightseeingOption'])
+            ->where('user_id', $user->id)
+            ->orderByDesc('booking_date')
+            ->orderByDesc('created_at')
+            ->take(100)
+            ->get();
+
+        $souvenirOrders = SouvenirOrder::with(['items.souvenir'])
+            ->where('user_id', $user->id)
+            ->orderByDesc('requested_delivery_date')
+            ->orderByDesc('created_at')
+            ->take(100)
+            ->get();
+
+        $transportBookings = TransportBooking::with(['vehicle'])
+            ->where('user_id', $user->id)
+            ->orderByDesc('created_at')
+            ->take(100)
+            ->get();
+
+        // Statistics for dashboard
+        $totalBookings = $restaurantBookings->count() + $guideBookings->count()
+            + $sightseeingBookings->count() + $souvenirOrders->count() + $transportBookings->count();
+        $souvenirTotalAmount = $souvenirOrders->sum(fn ($o) => (float) $o->total);
+        // Monetary totals per module (from listed records)
+        $totals = [
+            'restaurant' => ['amount' => $restaurantBookings->sum(fn ($b) => (float) ($b->estimated_total ?? 0)), 'currency' => 'INR'],
+            'guide' => ['amount' => $guideBookings->sum(fn ($b) => (float) ($b->estimated_total ?? $b->price ?? 0)), 'currency' => $guideBookings->first()->currency ?? 'INR'],
+            'sightseeing' => ['amount' => $sightseeingBookings->sum(fn ($b) => (float) ($b->price ?? 0)), 'currency' => $sightseeingBookings->first()->currency ?? 'CHF'],
+            'souvenir' => ['amount' => $souvenirTotalAmount, 'currency' => $souvenirOrders->first()->currency ?? 'EUR'],
+            'transport' => ['amount' => $transportBookings->sum(fn ($b) => (float) ($b->total_amount ?? 0)), 'currency' => $transportBookings->first()->currency ?? 'INR'],
+        ];
+        $stats = [
+            'restaurant' => ['total' => $restaurantBookings->count(), 'pending' => $restaurantBookings->where('status', 'pending')->count(), 'confirmed' => $restaurantBookings->where('status', 'confirmed')->count()],
+            'guide' => ['total' => $guideBookings->count(), 'pending' => $guideBookings->where('status', 'pending')->count(), 'confirmed' => $guideBookings->where('status', 'confirmed')->count()],
+            'sightseeing' => ['total' => $sightseeingBookings->count(), 'pending' => $sightseeingBookings->where('status', 'pending')->count(), 'confirmed' => $sightseeingBookings->where('status', 'confirmed')->count()],
+            'souvenir' => ['total' => $souvenirOrders->count(), 'pending' => $souvenirOrders->where('status', 'pending')->count(), 'confirmed' => $souvenirOrders->whereIn('status', ['confirmed', 'shipped', 'delivered'])->count()],
+            'transport' => ['total' => $transportBookings->count(), 'pending' => $transportBookings->where('status', 'pending')->count(), 'confirmed' => $transportBookings->where('status', 'confirmed')->count()],
+        ];
+
+        return view('admin.users.show', compact(
+            'user',
+            'restaurantBookings',
+            'guideBookings',
+            'sightseeingBookings',
+            'souvenirOrders',
+            'transportBookings',
+            'totalBookings',
+            'souvenirTotalAmount',
+            'totals',
+            'stats'
+        ));
     }
 
     /**

@@ -24,8 +24,10 @@ return new class extends Migration
             $table->time('start_time')->nullable();
             $table->time('end_time')->nullable();
             $table->integer('duration_hours')->nullable();
-            $table->decimal('price', 10, 2)->nullable();
-            $table->string('status')->default('active'); // active, inactive, pending
+            $table->decimal('half_day_price', 10, 2)->nullable();
+            $table->decimal('full_day_price', 10, 2)->nullable();
+            $table->decimal('extra_hour_price', 10, 2)->nullable();
+            $table->string('status')->default('active'); // active, inactive
             $table->text('notes')->nullable();
             $table->timestamps();
         });

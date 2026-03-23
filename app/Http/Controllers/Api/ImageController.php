@@ -48,13 +48,20 @@ class ImageController extends Controller
                 'png' => 'image/png',
                 'gif' => 'image/gif',
                 'webp' => 'image/webp',
+                'mp4' => 'video/mp4',
+                'webm' => 'video/webm',
+                'mov' => 'video/quicktime',
+                'm4v' => 'video/x-m4v',
+                'ogv' => 'video/ogg',
             ];
             $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
         }
 
-        // Validate it's actually an image
-        if (!str_starts_with($mimeType, 'image/')) {
-            abort(403, 'Forbidden: Not an image file');
+        // Allow images and videos (restaurant videos use same /api/images/{path} URL as ImageService::getUrl)
+        $allowed = str_starts_with($mimeType, 'image/')
+            || str_starts_with($mimeType, 'video/');
+        if (!$allowed) {
+            abort(403, 'Forbidden: Not an allowed media file');
         }
 
         // Set cache headers for better performance

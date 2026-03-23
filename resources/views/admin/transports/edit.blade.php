@@ -35,7 +35,8 @@
         </div>
         <div style="margin-bottom:20px;">
             <label>Currency</label>
-            <input type="text" name="currency" value="{{ old('currency', $transport->currency ?? 'EUR') }}" placeholder="EUR, INR" maxlength="10" style="width:100%; max-width:120px; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
+            <input type="text" value="INR" disabled style="width:100%; max-width:120px; padding:10px; border:2px solid #e2e8f0; border-radius:8px; background-color:#edf2f7;">
+            <input type="hidden" name="currency" value="INR">
         </div>
         <div style="margin-top:24px; margin-bottom:8px; font-weight:600; color:#4a5568;">Distance-based (between cities)</div>
         <div style="margin-bottom:20px;">

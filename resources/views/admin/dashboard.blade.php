@@ -3,98 +3,158 @@
 @section('title', 'Dashboard')
 @section('page-title', 'Dashboard')
 
+@push('styles')
+    <style>
+        .stat-card-link {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
+@endpush
+
 @section('content')
-    <!-- Module Statistics (Guides / Restaurants / Sightseeings) -->
+    <!-- Top summary cards -->
+    @php
+        $dashboardCards = [
+            [
+                'title' => 'Total Guides',
+                'value' => $stats['total_guides'] ?? 0,
+                'icon' => '🧑‍💼',
+                'iconStyle' => 'background: #dbeafe; color: #1e40af;',
+                'href' => route('admin.guides.index'),
+                'meta' => 'View all · Add new',
+            ],
+            [
+                'title' => 'Active Guides',
+                'value' => $stats['active_guides'] ?? 0,
+                'icon' => '✅',
+                'iconStyle' => 'background: #c6f6d5; color: #22543d;',
+                'href' => route('admin.guides.index', ['status' => 'active']),
+                'meta' => 'Currently active',
+            ],
+            [
+                'title' => 'Total Restaurants',
+                'value' => $stats['total_restaurants'] ?? 0,
+                'icon' => '🍽️',
+                'iconStyle' => 'background: #dbeafe; color: #1e40af;',
+                'href' => route('admin.restaurants.index'),
+                'meta' => 'View all · Add new',
+            ],
+            [
+                'title' => 'Active Restaurants',
+                'value' => $stats['active_restaurants'] ?? 0,
+                'icon' => '✅',
+                'iconStyle' => 'background: #c6f6d5; color: #22543d;',
+                'href' => route('admin.restaurants.index', ['status' => 'active']),
+                'meta' => 'Currently active',
+            ],
+            [
+                'title' => 'Total Sightseeings',
+                'value' => $stats['total_sightseeings'] ?? 0,
+                'icon' => '🗺️',
+                'iconStyle' => 'background: #dbeafe; color: #1e40af;',
+                'href' => route('admin.sightseeings.index'),
+                'meta' => 'View all · Add new',
+            ],
+            [
+                'title' => 'Active Sightseeings',
+                'value' => $stats['active_sightseeings'] ?? 0,
+                'icon' => '✅',
+                'iconStyle' => 'background: #c6f6d5; color: #22543d;',
+                'href' => route('admin.sightseeings.index', ['status' => 'active']),
+                'meta' => 'Currently active',
+            ],
+            [
+                'title' => 'Total Transports',
+                'value' => $stats['total_transports'] ?? 0,
+                'icon' => '🚐',
+                'iconStyle' => 'background: #e0f2fe; color: #0369a1;',
+                'href' => route('admin.transports.index'),
+                'meta' => 'View all',
+            ],
+            [
+                'title' => 'Active Transports',
+                'value' => $stats['active_transports'] ?? 0,
+                'icon' => '✅',
+                'iconStyle' => 'background: #dcfce7; color: #15803d;',
+                'href' => route('admin.transports.index', ['status' => 'active']),
+                'meta' => 'Currently active',
+            ],
+            [
+                'title' => 'Total Souvenirs',
+                'value' => $stats['total_souvenirs'] ?? 0,
+                'icon' => '🎁',
+                'iconStyle' => 'background: #fef3c7; color: #c2410c;',
+                'href' => route('admin.souvenirs.index'),
+                'meta' => 'View all',
+            ],
+            [
+                'title' => 'Active Souvenirs',
+                'value' => $stats['active_souvenirs'] ?? 0,
+                'icon' => '✅',
+                'iconStyle' => 'background: #fce7f3; color: #be185d;',
+                'href' => route('admin.souvenirs.index', ['status' => 'active']),
+                'meta' => 'Currently active',
+            ],
+        ];
+    @endphp
+
     <div class="stats-grid">
-        <!-- Guides -->
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Total Guides</div>
-                <div class="stat-icon" style="background: #dbeafe; color: #1e40af;">🧑‍💼</div>
+        @foreach($dashboardCards as $card)
+            <a href="{{ $card['href'] }}" class="stat-card stat-card-link">
+                <div class="stat-header">
+                    <div class="stat-title">{{ $card['title'] }}</div>
+                    <div class="stat-icon" style="{{ $card['iconStyle'] }}">{{ $card['icon'] }}</div>
+                </div>
+                <div class="stat-value">{{ number_format($card['value']) }}</div>
+                <div class="stat-change">{{ $card['meta'] }}</div>
+            </a>
+        @endforeach
+    </div>
+
+    <!-- Graphs row -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-bottom: 30px;">
+        <div class="card">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <h2 class="card-title">Modules Growth ({{ $charts['year'] ?? date('Y') }})</h2>
+                <span style="font-size: 12px; color:#718096;">Guides · Restaurants · Sightseeings · Transport · Souvenirs</span>
             </div>
-            <div class="stat-value">{{ number_format($stats['total_guides'] ?? 0) }}</div>
-            <div class="stat-change">
-                <a href="{{ route('admin.guides.index') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">View all</a>
-                · <a href="{{ route('admin.guides.create') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">Add new</a>
+            <div style="padding: 10px 20px 20px;">
+                <canvas id="modulesChart" height="120"></canvas>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Active Guides</div>
-                <div class="stat-icon" style="background: #c6f6d5; color: #22543d;">✅</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['active_guides'] ?? 0) }}</div>
-            <div class="stat-change">Currently active</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Pending Guides</div>
-                <div class="stat-icon" style="background: #feebc8; color: #7c2d12;">⏳</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['pending_guides'] ?? 0) }}</div>
-            <div class="stat-change">Awaiting approval</div>
         </div>
 
-        <!-- Restaurants -->
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Total Restaurants</div>
-                <div class="stat-icon" style="background: #dbeafe; color: #1e40af;">🍽️</div>
+        <div class="card" style="background: linear-gradient(135deg, #4f46e5, #ec4899); color: #fff;">
+            <div class="card-header" style="border-bottom: none;">
+                <h2 class="card-title" style="color:#fff;">Overview Snapshot</h2>
             </div>
-            <div class="stat-value">{{ number_format($stats['total_restaurants'] ?? 0) }}</div>
-            <div class="stat-change">
-                <a href="{{ route('admin.restaurants.index') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">View all</a>
-                · <a href="{{ route('admin.restaurants.create') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">Add new</a>
+            <div style="padding: 10px 20px 20px; display:grid; grid-template-columns:1fr 1fr; row-gap:10px; column-gap:20px; font-size:14px;">
+                <div>
+                    <div style="opacity:.8;">Guides</div>
+                    <div style="font-size:20px; font-weight:700;">{{ number_format($stats['total_guides'] ?? 0) }}</div>
+                </div>
+                <div>
+                    <div style="opacity:.8;">Restaurants</div>
+                    <div style="font-size:20px; font-weight:700;">{{ number_format($stats['total_restaurants'] ?? 0) }}</div>
+                </div>
+                <div>
+                    <div style="opacity:.8;">Sightseeings</div>
+                    <div style="font-size:20px; font-weight:700;">{{ number_format($stats['total_sightseeings'] ?? 0) }}</div>
+                </div>
+                <div>
+                    <div style="opacity:.8;">Transports</div>
+                    <div style="font-size:20px; font-weight:700;">{{ number_format($stats['total_transports'] ?? 0) }}</div>
+                </div>
+                <div>
+                    <div style="opacity:.8;">Souvenirs</div>
+                    <div style="font-size:20px; font-weight:700;">{{ number_format($stats['total_souvenirs'] ?? 0) }}</div>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Active Restaurants</div>
-                <div class="stat-icon" style="background: #c6f6d5; color: #22543d;">✅</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['active_restaurants'] ?? 0) }}</div>
-            <div class="stat-change">Currently active</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Pending Restaurants</div>
-                <div class="stat-icon" style="background: #feebc8; color: #7c2d12;">⏳</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['pending_restaurants'] ?? 0) }}</div>
-            <div class="stat-change">Awaiting approval</div>
-        </div>
-
-        <!-- Sightseeings -->
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Total Sightseeings</div>
-                <div class="stat-icon" style="background: #dbeafe; color: #1e40af;">🗺️</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['total_sightseeings'] ?? 0) }}</div>
-            <div class="stat-change">
-                <a href="{{ route('admin.sightseeings.index') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">View all</a>
-                · <a href="{{ route('admin.sightseeings.create') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">Add new</a>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Active Sightseeings</div>
-                <div class="stat-icon" style="background: #c6f6d5; color: #22543d;">✅</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['active_sightseeings'] ?? 0) }}</div>
-            <div class="stat-change">Currently active</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-title">Featured Sightseeings</div>
-                <div class="stat-icon" style="background: #ede9fe; color: #5b21b6;">⭐</div>
-            </div>
-            <div class="stat-value">{{ number_format($stats['featured_sightseeings'] ?? 0) }}</div>
-            <div class="stat-change">Marked featured</div>
         </div>
     </div>
 
-    <!-- Recent data (Guides / Restaurants / Sightseeings) -->
+    <!-- Recent data (Guides / Restaurants / Sightseeings / Transports / Souvenirs) -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; margin-bottom: 30px;">
         <!-- Recent Guides -->
         <div class="card">
@@ -122,8 +182,11 @@
                                 </td>
                                 <td>{{ $guide->city ?? 'N/A' }}</td>
                                 <td>
-                                    @if($guide->price !== null && $guide->price !== '')
-                                        ₹{{ number_format((float) $guide->price, 2) }}
+                                    @if($guide->half_day_price !== null && $guide->half_day_price !== '')
+                                        HD ₹{{ number_format((float) $guide->half_day_price, 2) }}
+                                        @if($guide->full_day_price !== null && $guide->full_day_price !== '')
+                                            <br>FD ₹{{ number_format((float) $guide->full_day_price, 2) }}
+                                        @endif
                                     @else
                                         N/A
                                     @endif
@@ -132,8 +195,6 @@
                                     @php $status = strtolower($guide->status ?? 'active'); @endphp
                                     @if($status === 'active')
                                         <span class="badge badge-success">Active</span>
-                                    @elseif($status === 'pending')
-                                        <span class="badge badge-warning">Pending</span>
                                     @elseif($status === 'inactive')
                                         <span class="badge badge-danger">Inactive</span>
                                     @else
@@ -182,8 +243,6 @@
                                     @php $status = strtolower($restaurant->status ?? 'active'); @endphp
                                     @if($status === 'active')
                                         <span class="badge badge-success">Active</span>
-                                    @elseif($status === 'pending')
-                                        <span class="badge badge-warning">Pending</span>
                                     @elseif($status === 'inactive')
                                         <span class="badge badge-danger">Inactive</span>
                                     @else
@@ -232,7 +291,7 @@
                                 <td>{{ $s->city ?? 'N/A' }}</td>
                                 <td>
                                     @if($s->standard_price !== null && $s->standard_price !== '')
-                                        {{ $s->currency ?? '₹' }}{{ number_format((float) $s->standard_price, 2) }}
+                                        ₹{{ number_format((float) $s->standard_price, 2) }}
                                     @else
                                         N/A
                                     @endif
@@ -260,53 +319,47 @@
                 </div>
             @endif
         </div>
-    </div>
 
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-        <!-- Recent Bookings -->
+        <!-- Recent Transports -->
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Recent Restaurant Bookings</h2>
-                <a href="{{ route('admin.bookings.index') }}" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 500;">View All</a>
+                <h2 class="card-title">Recent Transports</h2>
+                <a href="{{ route('admin.transports.index') }}" style="color: #0ea5e9; text-decoration: none; font-size: 14px; font-weight: 500;">View All</a>
             </div>
-            @if(isset($recentBookings) && $recentBookings->count() > 0)
+            @if(isset($recentTransports) && $recentTransports->count() > 0)
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Booking ID</th>
-                            <th>Restaurant</th>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Guests</th>
-                            <th>Est. Total</th>
+                            <th>Transport</th>
+                            <th>City</th>
+                            <th>Rate / Km</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($recentBookings as $booking)
+                        @foreach($recentTransports as $t)
                             <tr>
-                                <td>#{{ $booking->id }}</td>
-                                <td>{{ $booking->restaurant_name ?? 'N/A' }}</td>
-                                <td>{{ $booking->booking_date ? \Carbon\Carbon::parse($booking->booking_date)->format('Y-m-d') : 'N/A' }}</td>
-                                <td>{{ $booking->booking_time ?? 'N/A' }}</td>
-                                <td>{{ $booking->guests ?? '0' }}</td>
                                 <td>
-                                    @if($booking->estimated_total !== null)
-                                        ₹{{ number_format((float) $booking->estimated_total, 2) }}
+                                    <a href="{{ route('admin.transports.show', $t->id) }}" style="color: #2d3748; text-decoration: none; font-weight: 600;">
+                                        #{{ $t->id }} {{ $t->vehicle_name ?? 'Vehicle' }}
+                                    </a>
+                                </td>
+                                <td>{{ $t->location ?? 'N/A' }}</td>
+                                <td>
+                                    @if($t->price_per_km !== null && $t->price_per_km !== '')
+                                        ₹{{ number_format((float) $t->price_per_km, 2) }}
                                     @else
                                         N/A
                                     @endif
                                 </td>
                                 <td>
-                                    @php
-                                        $status = strtolower($booking->status ?? 'pending');
-                                    @endphp
-                                    @if($status === 'confirmed')
-                                        <span class="badge badge-success">Confirmed</span>
+                                    @php $status = strtolower($t->status ?? 'active'); @endphp
+                                    @if($status === 'active')
+                                        <span class="badge badge-success">Active</span>
                                     @elseif($status === 'pending')
                                         <span class="badge badge-warning">Pending</span>
-                                    @elseif($status === 'cancelled')
-                                        <span class="badge badge-danger">Cancelled</span>
+                                    @elseif($status === 'inactive')
+                                        <span class="badge badge-danger">Inactive</span>
                                     @else
                                         <span class="badge badge-info">{{ ucfirst($status) }}</span>
                                     @endif
@@ -317,12 +370,70 @@
                 </table>
             @else
                 <div class="empty-state">
-                    <div class="empty-state-icon">📋</div>
-                    <p>No bookings found. Bookings will appear here once they are created.</p>
+                    <div class="empty-state-icon">🚐</div>
+                    <p>No transports found yet.</p>
                 </div>
             @endif
         </div>
 
+        <!-- Recent Souvenirs -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Recent Souvenirs</h2>
+                <a href="{{ route('admin.souvenirs.index') }}" style="color: #f97316; text-decoration: none; font-size: 14px; font-weight: 500;">View All</a>
+            </div>
+            @if(isset($recentSouvenirs) && $recentSouvenirs->count() > 0)
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Souvenir</th>
+                            <th>City</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($recentSouvenirs as $sv)
+                            <tr>
+                                <td>
+                                    <a href="{{ route('admin.souvenirs.edit', $sv->id) }}" style="color: #2d3748; text-decoration: none; font-weight: 600;">
+                                        #{{ $sv->id }} {{ $sv->name ?? 'Unnamed' }}
+                                    </a>
+                                </td>
+                                <td>{{ $sv->city ?? $sv->country ?? 'N/A' }}</td>
+                                <td>
+                                    @if($sv->price !== null && $sv->price !== '')
+                                        ₹{{ number_format((float) $sv->price, 2) }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>
+                                    @php $status = strtolower($sv->status ?? 'active'); @endphp
+                                    @if($status === 'active')
+                                        <span class="badge badge-success">Active</span>
+                                    @elseif($status === 'pending')
+                                        <span class="badge badge-warning">Pending</span>
+                                    @elseif($status === 'inactive')
+                                        <span class="badge badge-danger">Inactive</span>
+                                    @else
+                                        <span class="badge badge-info">{{ ucfirst($status) }}</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎁</div>
+                    <p>No souvenirs found yet.</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
         <!-- Notifications -->
         <div class="card">
             <div class="card-header">
@@ -345,7 +456,83 @@
             @endif
         </div>
     </div>
+
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            (function () {
+                const ctx = document.getElementById('modulesChart');
+                if (!ctx) return;
+
+                const labels = @json($charts['labels'] ?? []);
+                const series = @json($charts['series'] ?? []);
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Guides',
+                                data: series.guides || [],
+                                borderColor: '#4f46e5',
+                                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                            },
+                            {
+                                label: 'Restaurants',
+                                data: series.restaurants || [],
+                                borderColor: '#22c55e',
+                                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                            },
+                            {
+                                label: 'Sightseeings',
+                                data: series.sightseeings || [],
+                                borderColor: '#f97316',
+                                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                            },
+                            {
+                                label: 'Transports',
+                                data: series.transports || [],
+                                borderColor: '#0ea5e9',
+                                backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                            },
+                            {
+                                label: 'Souvenirs',
+                                data: series.souvenirs || [],
+                                borderColor: '#ec4899',
+                                backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0,
+                                },
+                            },
+                        },
+                    },
+                });
+            })();
+        </script>
+    @endpush
 @endsection
-
-
-

@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Booking;
-use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -20,41 +18,46 @@ class DashboardController extends Controller
             'total_restaurants' => $this->safeCount('restaurants'),
             'active_restaurants' => $this->safeCount('restaurants', ['status' => 'active']),
             'inactive_restaurants' => $this->safeCount('restaurants', ['status' => 'inactive']),
-            'pending_restaurants' => $this->safeCount('restaurants', ['status' => 'pending']),
 
             // Guides
             'total_guides' => $this->safeCount('guides'),
             'active_guides' => $this->safeCount('guides', ['status' => 'active']),
             'inactive_guides' => $this->safeCount('guides', ['status' => 'inactive']),
-            'pending_guides' => $this->safeCount('guides', ['status' => 'pending']),
 
             // Sightseeings
             'total_sightseeings' => $this->safeCount('sightseeings'),
             'active_sightseeings' => $this->safeCount('sightseeings', ['status' => 'active']),
             'inactive_sightseeings' => $this->safeCount('sightseeings', ['status' => 'inactive']),
-            'featured_sightseeings' => $this->safeCount('sightseeings', ['is_featured' => 1]),
 
-            // Bookings
-            'total_bookings' => $this->safeCount('bookings'),
-            'pending_bookings' => $this->safeCount('bookings', ['status' => 'pending']),
-            'confirmed_bookings' => $this->safeCount('bookings', ['status' => 'confirmed']),
-            'cancelled_bookings' => $this->safeCount('bookings', ['status' => 'cancelled']),
-            'total_revenue' => $this->safeSum('bookings', 'estimated_total', ['status' => 'confirmed']),
+            // Transports
+            'total_transports' => $this->safeCount('transports'),
+            'active_transports' => $this->safeCount('transports', ['status' => 'active']),
+            'inactive_transports' => $this->safeCount('transports', ['status' => 'inactive']),
+
+            // Souvenirs
+            'total_souvenirs' => $this->safeCount('souvenirs'),
+            'active_souvenirs' => $this->safeCount('souvenirs', ['status' => 'active']),
+            'inactive_souvenirs' => $this->safeCount('souvenirs', ['status' => 'inactive']),
         ];
 
         $recentGuides = $this->getRecentGuides(6);
         $recentRestaurants = $this->getRecentRestaurants(6);
         $recentSightseeings = $this->getRecentSightseeings(6);
-        $recentBookings = $this->getRecentBookings(10);
+        $recentTransports = $this->getRecentTransports(6);
+        $recentSouvenirs = $this->getRecentSouvenirs(6);
         $notifications = $this->safeGet('notifications', 5);
+
+        $charts = $this->buildModuleCharts();
 
         return view('admin.dashboard', compact(
             'stats',
             'recentGuides',
             'recentRestaurants',
             'recentSightseeings',
-            'recentBookings',
-            'notifications'
+            'recentTransports',
+            'recentSouvenirs',
+            'notifications',
+            'charts'
         ));
     }
 
@@ -106,35 +109,47 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get recent bookings with restaurant info.
+     * Build simple monthly charts for modules.
      */
-    private function getRecentBookings($limit = 10)
+    private function buildModuleCharts(): array
     {
-        try {
-            return DB::table('bookings as b')
-                ->leftJoin('restaurants as r', 'r.id', '=', 'b.restaurant_id')
-                ->select(
-                    'b.id',
-                    'b.status',
-<<<<<<< HEAD
-                    'b.booking_date',
-                    'b.booking_time',
-                    'b.guests',
-=======
-                    'b.check_in',
-                    'b.check_out',
-                    'b.guests',
-                    'b.rooms',
->>>>>>> e5334abf5277c6dce091c39f57cc3a9fe20f7167
-                    'b.estimated_total',
-                    'r.restaurant_name'
-                )
-                ->orderBy('b.created_at', 'desc')
-                ->limit($limit)
-                ->get();
-        } catch (\Exception $e) {
-            return collect([]);
+        $year = date('Y');
+        $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        $modules = [
+            'guides' => 'guides',
+            'restaurants' => 'restaurants',
+            'sightseeings' => 'sightseeings',
+            'transports' => 'transports',
+            'souvenirs' => 'souvenirs',
+        ];
+
+        $series = [];
+
+        foreach ($modules as $key => $table) {
+            try {
+                $rows = DB::table($table)
+                    ->selectRaw('MONTH(created_at) as month, COUNT(*) as total')
+                    ->whereYear('created_at', $year)
+                    ->groupBy('month')
+                    ->pluck('total', 'month')
+                    ->toArray();
+            } catch (\Exception $e) {
+                $rows = [];
+            }
+
+            $data = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $data[] = (int)($rows[$m] ?? 0);
+            }
+            $series[$key] = $data;
         }
+
+        return [
+            'year' => $year,
+            'labels' => $labels,
+            'series' => $series,
+        ];
     }
 
     /**
@@ -144,7 +159,7 @@ class DashboardController extends Controller
     {
         try {
             return DB::table('guides')
-                ->select('id', 'title', 'city', 'country', 'price', 'status', 'created_at')
+                ->select('id', 'title', 'city', 'country', 'half_day_price', 'full_day_price', 'extra_hour_price', 'status', 'created_at')
                 ->orderBy('created_at', 'desc')
                 ->limit($limit)
                 ->get();
@@ -177,6 +192,47 @@ class DashboardController extends Controller
         try {
             return DB::table('sightseeings')
                 ->select('id', 'title', 'city', 'country', 'standard_price', 'currency', 'is_featured', 'status', 'created_at')
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+        } catch (\Exception $e) {
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get recent transports.
+     */
+    private function getRecentTransports($limit = 10)
+    {
+        try {
+            return DB::table('transports as t')
+                ->leftJoin('vehicles as v', 'v.id', '=', 't.vehicle_id')
+                ->select(
+                    't.id',
+                    't.location',
+                    't.price_per_km',
+                    't.price_per_day',
+                    't.status',
+                    't.created_at',
+                    'v.name as vehicle_name'
+                )
+                ->orderBy('t.created_at', 'desc')
+                ->limit($limit)
+                ->get();
+        } catch (\Exception $e) {
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get recent souvenirs.
+     */
+    private function getRecentSouvenirs($limit = 10)
+    {
+        try {
+            return DB::table('souvenirs')
+                ->select('id', 'name', 'city', 'country', 'price', 'currency', 'status', 'created_at')
                 ->orderBy('created_at', 'desc')
                 ->limit($limit)
                 ->get();

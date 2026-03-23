@@ -65,7 +65,6 @@
                         <select name="status" required style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
                             <option value="active" {{ old('status', $guide->status) == 'active' ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ old('status', $guide->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                            <option value="pending" {{ old('status', $guide->status) == 'pending' ? 'selected' : '' }}>Pending</option>
                         </select>
                     </div>
                     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
@@ -75,10 +74,6 @@
                         <label style="display:flex; align-items:center; gap:8px;">
                             <input type="checkbox" name="featured_guide" value="1" {{ old('featured_guide', $guide->featured_guide) ? 'checked' : '' }}> Featured guide
                         </label>
-                        <div style="flex:1;">
-                            <label style="display:block; margin-bottom:8px; font-weight:600; color:#2d3748;">Priority Order</label>
-                            <input type="number" name="profile_priority_order" value="{{ old('profile_priority_order', $guide->profile_priority_order) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
-                        </div>
                     </div>
                 </div>
             </div>
@@ -96,7 +91,6 @@
                     <div>
                         <label style="display:block; margin-bottom:6px; font-weight:600;">Verification Status</label>
                         <select name="verification_status" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">
-                            <option value="pending" {{ old('verification_status', $guide->verification_status) == 'pending' ? 'selected' : '' }}>Pending</option>
                             <option value="approved" {{ old('verification_status', $guide->verification_status) == 'approved' ? 'selected' : '' }}>Approved</option>
                             <option value="rejected" {{ old('verification_status', $guide->verification_status) == 'rejected' ? 'selected' : '' }}>Rejected</option>
                         </select>
@@ -109,13 +103,10 @@
             </div>
 
             <div style="margin-bottom:30px;">
-                <h3 style="color:#2d3748; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:20px;">Location & Coverage</h3>
+                <h3 style="color:#2d3748; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:20px;">Location</h3>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px;">
                     <div><label style="display:block; margin-bottom:6px; font-weight:600;">Country</label><input type="text" name="country" value="{{ old('country', $guide->country) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
                     <div><label style="display:block; margin-bottom:6px; font-weight:600;">City</label><input type="text" name="city" value="{{ old('city', $guide->city) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Operating Areas (comma separated)</label><input type="text" name="operating_areas" value="{{ old('operating_areas', implode(',', $guide->operating_areas ?? [])) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Meeting Points (comma separated)</label><input type="text" name="meeting_points" value="{{ old('meeting_points', implode(',', $guide->meeting_points ?? [])) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Drop-off Points (comma separated)</label><input type="text" name="dropoff_points" value="{{ old('dropoff_points', implode(',', $guide->dropoff_points ?? [])) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
                 </div>
             </div>
 
@@ -144,8 +135,6 @@
                     <div><label style="display:block; margin-bottom:6px; font-weight:600;">Available To</label><input type="date" name="available_to_date" value="{{ old('available_to_date', optional($guide->available_to_date)->format('Y-m-d')) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
                     <div><label style="display:block; margin-bottom:6px; font-weight:600;">Daily Start Time</label><input type="time" name="daily_start_time" value="{{ old('daily_start_time', optional($guide->daily_start_time)->format('H:i')) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
                     <div><label style="display:block; margin-bottom:6px; font-weight:600;">Daily End Time</label><input type="time" name="daily_end_time" value="{{ old('daily_end_time', optional($guide->daily_end_time)->format('H:i')) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Specific Service Date (optional)</label><input type="date" name="service_date" value="{{ old('service_date', optional($guide->service_date)->format('Y-m-d')) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Duration (Hours)</label><input type="number" name="duration_hours" value="{{ old('duration_hours', $guide->duration_hours) }}" min="1" max="72" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
                 </div>
                 <div style="margin:15px 0; display:flex; gap:12px; flex-wrap:wrap;">
                     @php $days = ['mon'=>'Mon','tue'=>'Tue','wed'=>'Wed','thu'=>'Thu','fri'=>'Fri','sat'=>'Sat','sun'=>'Sun']; @endphp
@@ -157,44 +146,11 @@
                     @endforeach
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px;">
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Start Time Slots (comma separated)</label><input type="text" name="start_time_slots" value="{{ old('start_time_slots', implode(',', $guide->start_time_slots ?? [])) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Blackout Dates (comma separated YYYY-MM-DD)</label><input type="text" name="blackout_dates" value="{{ old('blackout_dates', implode(',', $guide->blackout_dates ?? [])) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div style="display:flex; align-items:center; gap:8px; margin-top:26px;">
-                        <input type="checkbox" name="end_time_auto_calculated" value="1" {{ old('end_time_auto_calculated', $guide->end_time_auto_calculated) ? 'checked' : '' }}>
-                        <span>Auto-calc end time from duration</span>
-                    </div>
                     <div><label style="display:block; margin-bottom:6px; font-weight:600;">Max Bookings / Day</label><input type="number" name="max_bookings_per_day" value="{{ old('max_bookings_per_day', $guide->max_bookings_per_day) }}" min="1" max="500" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
                 </div>
             </div>
 
-            <div style="margin-bottom:30px;">
-                <h3 style="color:#2d3748; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:20px;">Pricing</h3>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px;">
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Standard Price</label><input type="number" name="price" value="{{ old('price', $guide->price) }}" step="0.01" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Base Price</label><input type="number" name="base_price" value="{{ old('base_price', $guide->base_price) }}" step="0.01" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Peak Season Price</label><input type="number" name="peak_season_price" value="{{ old('peak_season_price', $guide->peak_season_price) }}" step="0.01" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Off-Season Price</label><input type="number" name="off_season_price" value="{{ old('off_season_price', $guide->off_season_price) }}" step="0.01" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Weekend Price</label><input type="number" name="weekend_price" value="{{ old('weekend_price', $guide->weekend_price) }}" step="0.01" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Festival / Holiday Surcharge</label><input type="number" name="festival_surcharge" value="{{ old('festival_surcharge', $guide->festival_surcharge) }}" step="0.01" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Child Discount (%)</label><input type="number" name="child_discount" value="{{ old('child_discount', $guide->child_discount) }}" step="0.01" min="0" max="100" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                </div>
-            </div>
-
-            <div style="margin-bottom:30px;">
-                <h3 style="color:#2d3748; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:20px;">Booking & Service Flow</h3>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px;">
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Default Start Location</label><input type="text" name="default_start_location" value="{{ old('default_start_location', $guide->default_start_location) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Default End Location</label><input type="text" name="default_end_location" value="{{ old('default_end_location', $guide->default_end_location) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Meeting Point (Start)</label><input type="text" name="start_point" value="{{ old('start_point', $guide->start_point) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Drop-off Point (End)</label><input type="text" name="end_point" value="{{ old('end_point', $guide->end_point) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Start Time</label><input type="time" name="start_time" value="{{ old('start_time', optional($guide->start_time)->format('H:i')) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">End Time</label><input type="time" name="end_time" value="{{ old('end_time', optional($guide->end_time)->format('H:i')) }}" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                </div>
-                <div style="margin-top:15px;">
-                    <label style="display:block; margin-bottom:6px; font-weight:600;">Notes</label>
-                    <textarea name="notes" rows="2" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">{{ old('notes', $guide->notes) }}</textarea>
-                </div>
-            </div>
+            
 
             <div style="margin-bottom:30px;">
                 <h3 style="color:#2d3748; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:20px;">Documents & Verification</h3>
@@ -236,18 +192,7 @@
                 </div>
             </div>
 
-            <div style="margin-bottom:30px;">
-                <h3 style="color:#2d3748; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:20px;">Ratings & Performance (admin)</h3>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px;">
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Average Rating</label><input type="number" name="average_rating" value="{{ old('average_rating', $guide->average_rating) }}" step="0.01" min="0" max="5" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Total Bookings Completed</label><input type="number" name="total_bookings_completed" value="{{ old('total_bookings_completed', $guide->total_bookings_completed) }}" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Cancellation Count</label><input type="number" name="cancellation_count" value="{{ old('cancellation_count', $guide->cancellation_count) }}" min="0" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;"></div>
-                </div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; margin-top:12px;">
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Customer Feedback (summary)</label><textarea name="customer_feedback" rows="2" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">{{ old('customer_feedback', $guide->customer_feedback) }}</textarea></div>
-                    <div><label style="display:block; margin-bottom:6px; font-weight:600;">Admin Notes</label><textarea name="admin_notes" rows="2" style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px;">{{ old('admin_notes', $guide->admin_notes) }}</textarea></div>
-                </div>
-            </div>
+            
 
             <div style="margin-bottom:30px;">
                 <h3 style="color:#2d3748; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin-bottom:12px;">Service Packages (multiple)</h3>
@@ -260,6 +205,7 @@
                                 <button type="button" onclick="this.closest('.package-row').remove()" style="background:none; color:#e53e3e; border:none; font-weight:700; cursor:pointer;">Remove</button>
                             </div>
                             <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:10px;">
+                                <input type="hidden" name="packages[{{ $index }}][id]" value="{{ $pkg['id'] ?? '' }}">
                                 <div><label>Service Type</label>
                                     <select name="packages[{{ $index }}][service_type]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
                                         <option value="">Select</option>
@@ -272,17 +218,25 @@
                                 <div><label>Service Name</label><input type="text" name="packages[{{ $index }}][service_name]" value="{{ $pkg['service_name'] ?? '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
                                 <div><label>Duration (hrs)</label><input type="number" name="packages[{{ $index }}][duration_hours]" value="{{ $pkg['duration_hours'] ?? '' }}" min="1" max="24" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
                                 <div><label>Currency</label><input type="text" name="packages[{{ $index }}][currency]" value="{{ $pkg['currency'] ?? 'INR' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:10px;">
-                                <div><label>Standard Price</label><input type="number" step="0.01" min="0" name="packages[{{ $index }}][standard_price]" value="{{ $pkg['standard_price'] ?? '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                                <div><label>Extra Hour Price</label><input type="number" step="0.01" min="0" name="packages[{{ $index }}][extra_hour_price]" value="{{ $pkg['extra_hour_price'] ?? '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                                <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[{{ $index }}][includes_lunch]" value="1" {{ !empty($pkg['includes_lunch']) ? 'checked' : '' }}> Lunch</label>
-                                <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[{{ $index }}][includes_dinner]" value="1" {{ !empty($pkg['includes_dinner']) ? 'checked' : '' }}> Dinner</label>
-                                <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[{{ $index }}][active]" value="1" {{ array_key_exists('active',$pkg) ? ($pkg['active'] ? 'checked' : '') : 'checked' }}> Active</label>
+                                <div><label>Price</label><input type="number" name="packages[{{ $index }}][standard_price]" value="{{ $pkg['standard_price'] ?? '' }}" step="0.01" min="0" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Extra Hour Price</label><input type="number" name="packages[{{ $index }}][extra_hour_price]" value="{{ $pkg['extra_hour_price'] ?? '' }}" step="0.01" min="0" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Default Start Location</label><input type="text" name="packages[{{ $index }}][default_start_location]" value="{{ $pkg['default_start_location'] ?? '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Default End Location</label><input type="text" name="packages[{{ $index }}][default_end_location]" value="{{ $pkg['default_end_location'] ?? '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Meeting Point (Start)</label><input type="text" name="packages[{{ $index }}][start_point]" value="{{ $pkg['start_point'] ?? '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Drop-off Point (End)</label><input type="text" name="packages[{{ $index }}][end_point]" value="{{ $pkg['end_point'] ?? '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Start Time</label><input type="time" name="packages[{{ $index }}][start_time]" value="{{ isset($pkg['start_time']) && $pkg['start_time'] ? \Illuminate\Support\Str::of((string)$pkg['start_time'])->substr(0,5) : '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>End Time</label><input type="time" name="packages[{{ $index }}][end_time]" value="{{ isset($pkg['end_time']) && $pkg['end_time'] ? \Illuminate\Support\Str::of((string)$pkg['end_time'])->substr(0,5) : '' }}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div>
+                                    <label>Status</label>
+                                    <select name="packages[{{ $index }}][status]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+                                        <option value="active" {{ (($pkg['status'] ?? null) === 'inactive' || array_key_exists('active', $pkg) && !$pkg['active']) ? '' : 'selected' }}>Active</option>
+                                        <option value="inactive" {{ (($pkg['status'] ?? null) === 'inactive' || array_key_exists('active', $pkg) && !$pkg['active']) ? 'selected' : '' }}>Inactive</option>
+                                    </select>
+                                </div>
                             </div>
                             <div style="margin-top:10px;">
-                                <label>Description</label>
-                                <textarea name="packages[{{ $index }}][description]" rows="2" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">{{ $pkg['description'] ?? '' }}</textarea>
+                                <label>Notes</label>
+                                <textarea name="packages[{{ $index }}][notes]" rows="2" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">{{ $pkg['notes'] ?? $pkg['description'] ?? '' }}</textarea>
                             </div>
                         </div>
                     @empty
@@ -300,17 +254,25 @@
                                 <div><label>Service Name</label><input type="text" name="packages[0][service_name]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
                                 <div><label>Duration (hrs)</label><input type="number" name="packages[0][duration_hours]" min="1" max="24" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
                                 <div><label>Currency</label><input type="text" name="packages[0][currency]" value="INR" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:10px;">
-                                <div><label>Standard Price</label><input type="number" step="0.01" min="0" name="packages[0][standard_price]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                                <div><label>Extra Hour Price</label><input type="number" step="0.01" min="0" name="packages[0][extra_hour_price]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                                <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[0][includes_lunch]" value="1"> Lunch</label>
-                                <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[0][includes_dinner]" value="1"> Dinner</label>
-                                <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[0][active]" value="1" checked> Active</label>
+                                <div><label>Price</label><input type="number" name="packages[0][standard_price]" step="0.01" min="0" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Extra Hour Price</label><input type="number" name="packages[0][extra_hour_price]" step="0.01" min="0" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Default Start Location</label><input type="text" name="packages[0][default_start_location]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Default End Location</label><input type="text" name="packages[0][default_end_location]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Meeting Point (Start)</label><input type="text" name="packages[0][start_point]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Drop-off Point (End)</label><input type="text" name="packages[0][end_point]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>Start Time</label><input type="time" name="packages[0][start_time]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div><label>End Time</label><input type="time" name="packages[0][end_time]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                                <div>
+                                    <label>Status</label>
+                                    <select name="packages[0][status]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+                                        <option value="active" selected>Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
                             </div>
                             <div>
-                                <label>Description</label>
-                                <textarea name="packages[0][description]" rows="2" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></textarea>
+                                <label>Notes</label>
+                                <textarea name="packages[0][notes]" rows="2" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></textarea>
                             </div>
                         </div>
                     @endforelse
@@ -349,17 +311,25 @@
                     <div><label>Service Name</label><input type="text" name="packages[${idx}][service_name]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
                     <div><label>Duration (hrs)</label><input type="number" name="packages[${idx}][duration_hours]" min="1" max="24" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
                     <div><label>Currency</label><input type="text" name="packages[${idx}][currency]" value="INR" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                </div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:10px;">
-                    <div><label>Standard Price</label><input type="number" step="0.01" min="0" name="packages[${idx}][standard_price]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                    <div><label>Extra Hour Price</label><input type="number" step="0.01" min="0" name="packages[${idx}][extra_hour_price]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
-                    <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[${idx}][includes_lunch]" value="1"> Lunch</label>
-                    <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[${idx}][includes_dinner]" value="1"> Dinner</label>
-                    <label style="display:flex; align-items:center; gap:6px; margin-top:24px;"><input type="checkbox" name="packages[${idx}][active]" value="1" checked> Active</label>
+                    <div><label>Price</label><input type="number" name="packages[${idx}][standard_price]" step="0.01" min="0" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                    <div><label>Extra Hour Price</label><input type="number" name="packages[${idx}][extra_hour_price]" step="0.01" min="0" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                    <div><label>Default Start Location</label><input type="text" name="packages[${idx}][default_start_location]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                    <div><label>Default End Location</label><input type="text" name="packages[${idx}][default_end_location]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                    <div><label>Meeting Point (Start)</label><input type="text" name="packages[${idx}][start_point]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                    <div><label>Drop-off Point (End)</label><input type="text" name="packages[${idx}][end_point]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                    <div><label>Start Time</label><input type="time" name="packages[${idx}][start_time]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                    <div><label>End Time</label><input type="time" name="packages[${idx}][end_time]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></div>
+                    <div>
+                        <label>Status</label>
+                        <select name="packages[${idx}][status]" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+                            <option value="active" selected>Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
                 </div>
                 <div style="margin-top:10px;">
-                    <label>Description</label>
-                    <textarea name="packages[${idx}][description]" rows="2" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></textarea>
+                    <label>Notes</label>
+                    <textarea name="packages[${idx}][notes]" rows="2" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;"></textarea>
                 </div>
             </div>
             `;

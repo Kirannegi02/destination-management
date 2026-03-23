@@ -47,7 +47,7 @@ class GuideController extends Controller
         }
         if (!empty($validated['service_type'])) {
             $type = $validated['service_type'];
-            $query->whereHas('packages', fn($p) => $p->where('service_type', $type)->where('active', true));
+            $query->whereHas('packages', fn($p) => $p->where('service_type', $type)->where('status', 'active'));
         }
         if (!empty($validated['availability_date'])) {
             $date = Carbon::parse($validated['availability_date'])->toDateString();
@@ -58,17 +58,13 @@ class GuideController extends Controller
             })->where(function ($q) use ($date) {
                 $q->whereNull('available_to_date')
                     ->orWhereDate('available_to_date', '>=', $date);
-            })->where(function ($q) use ($date) {
-                $q->whereNull('blackout_dates')
-                    ->orWhereRaw("JSON_CONTAINS(COALESCE(blackout_dates,'[]'), '\"{$date}\"') = 0");
             })->where(function ($q) use ($dayKey) {
                 $q->whereNull('available_days')
                     ->orWhereRaw("JSON_CONTAINS(COALESCE(available_days,'[]'), '\"{$dayKey}\"')");
             });
         }
 
-        $guides = $query->orderBy('profile_priority_order', 'desc')
-            ->orderBy('created_at', 'desc')
+        $guides = $query->orderBy('created_at', 'desc')
             ->paginate($validated['per_page'] ?? 15);
 
         $guides->getCollection()->transform(fn($guide) => $this->transformGuide($guide));
@@ -124,7 +120,7 @@ class GuideController extends Controller
                 ->values()
                 ->toArray(),
             'service_types' => DB::table('guide_packages')
-                ->where('active', true)
+                ->where('status', 'active')
                 ->distinct()
                 ->pluck('service_type')
                 ->filter()
@@ -176,7 +172,6 @@ class GuideController extends Controller
             'profile_photo_url' => $profilePhotoUrl,
             'city' => $guide->city,
             'country' => $guide->country,
-            'operating_areas' => $guide->operating_areas,
             'languages' => [
                 'primary' => $guide->primary_language ?? $guide->language,
                 'others' => $guide->other_languages ?? [],
@@ -188,17 +183,6 @@ class GuideController extends Controller
                 'days' => $guide->available_days,
                 'daily_start_time' => $guide->daily_start_time?->format('H:i'),
                 'daily_end_time' => $guide->daily_end_time?->format('H:i'),
-                'blackout_dates' => $guide->blackout_dates,
-                'slots' => $guide->start_time_slots,
-            ],
-            'pricing' => [
-                'standard' => $guide->price ? (float) $guide->price : null,
-                'base' => $guide->base_price ? (float) $guide->base_price : null,
-                'peak' => $guide->peak_season_price ? (float) $guide->peak_season_price : null,
-                'off_season' => $guide->off_season_price ? (float) $guide->off_season_price : null,
-                'weekend' => $guide->weekend_price ? (float) $guide->weekend_price : null,
-                'festival_surcharge' => $guide->festival_surcharge ? (float) $guide->festival_surcharge : null,
-                'child_discount' => $guide->child_discount ? (float) $guide->child_discount : null,
             ],
             'experience' => [
                 'years' => $guide->years_experience,
@@ -210,24 +194,23 @@ class GuideController extends Controller
                 'status' => $guide->verification_status,
                 'police_verified' => (bool) $guide->police_verification,
             ],
-            'ratings' => [
-                'average_rating' => $guide->average_rating ? (float) $guide->average_rating : null,
-                'total_bookings_completed' => $guide->total_bookings_completed,
-                'cancellation_count' => $guide->cancellation_count,
-            ],
             'packages' => $guide->packages->map(function ($package) {
                 return [
                     'id' => $package->id,
                     'service_type' => $package->service_type,
                     'service_name' => $package->service_name,
                     'duration_hours' => $package->duration_hours,
-                    'includes_lunch' => $package->includes_lunch,
-                    'includes_dinner' => $package->includes_dinner,
-                    'description' => $package->description,
                     'standard_price' => $package->standard_price ? (float) $package->standard_price : null,
                     'extra_hour_price' => $package->extra_hour_price ? (float) $package->extra_hour_price : null,
                     'currency' => $package->currency,
-                    'active' => $package->active,
+                    'default_start_location' => $package->default_start_location,
+                    'default_end_location' => $package->default_end_location,
+                    'start_point' => $package->start_point,
+                    'end_point' => $package->end_point,
+                    'start_time' => $package->start_time?->format('H:i'),
+                    'end_time' => $package->end_time?->format('H:i'),
+                    'notes' => $package->notes,
+                    'status' => $package->status,
                 ];
             })->values(),
             'description' => $guide->description,

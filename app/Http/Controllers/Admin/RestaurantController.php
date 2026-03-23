@@ -92,7 +92,6 @@ class RestaurantController extends Controller
         $allCount = Restaurant::count();
         $activeCount = Restaurant::where('status', 'active')->count();
         $inactiveCount = Restaurant::where('status', 'inactive')->count();
-        $pendingCount = Restaurant::where('status', 'pending')->count();
 
         return view('admin.restaurants.index', compact(
             'restaurants', 
@@ -101,8 +100,7 @@ class RestaurantController extends Controller
             'cuisineTypes',
             'allCount',
             'activeCount',
-            'inactiveCount',
-            'pendingCount'
+            'inactiveCount'
         ));
     }
 
@@ -148,7 +146,7 @@ class RestaurantController extends Controller
             'social_media_links' => 'nullable|array',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'status' => 'required|in:active,inactive,pending',
+            'status' => 'required|in:active,inactive',
         ]);
 
         // Handle multiple image uploads
@@ -264,7 +262,7 @@ class RestaurantController extends Controller
             'social_media_links' => 'nullable|array',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'status' => 'required|in:active,inactive,pending',
+            'status' => 'required|in:active,inactive',
         ]);
 
         // Handle video (new upload, URL, or remove)
@@ -513,7 +511,7 @@ class RestaurantController extends Controller
                 'price' => 'nullable|numeric|min:0',
                 'cuisine_type' => 'nullable|string|max:100',
                 'seating_capacity' => 'nullable|integer|min:1',
-                'status' => 'required|in:active,inactive,pending',
+                'status' => 'required|in:active,inactive',
                 'tax_number' => 'nullable|string|max:15',
                 'license_number' => 'nullable|string|max:100',
             ]);
@@ -526,7 +524,7 @@ class RestaurantController extends Controller
 
             // Ensure status default if missing after normalization
             if (empty($payload['status'])) {
-                $payload['status'] = 'pending';
+                $payload['status'] = 'active';
             }
 
             $match = array_filter([
@@ -808,7 +806,7 @@ class RestaurantController extends Controller
 
         if ($column === 'status') {
             $value = strtolower((string) $value);
-            return in_array($value, ['active', 'inactive', 'pending'], true) ? $value : 'pending';
+            return in_array($value, ['active', 'inactive'], true) ? $value : 'active';
         }
 
         if ($column === 'star_rating') {

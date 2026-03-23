@@ -154,4 +154,12 @@ class User extends Authenticatable implements JWTSubject
 
         return true;
     }
+
+    /**
+     * Shipping addresses for souvenir orders.
+     */
+    public function addresses()
+    {
+        return $this->hasMany(UserAddress::class);
+    }
 }

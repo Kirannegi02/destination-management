@@ -64,10 +64,6 @@
                        class="status-tab {{ $status == 'inactive' ? 'status-tab--active' : 'status-tab--inactive' }}">
                         Inactive ({{ $inactiveCount }})
                     </a>
-                    <a href="{{ route('admin.restaurants.index', ['status' => 'pending']) }}" 
-                       class="status-tab {{ $status == 'pending' ? 'status-tab--active' : 'status-tab--inactive' }}">
-                        Pending ({{ $pendingCount }})
-                    </a>
                 </div>
             </div>
         </div>
@@ -213,10 +209,8 @@
                             <td>
                                 @if($restaurant->status === 'active')
                                     <span class="badge badge-success">Active</span>
-                                @elseif($restaurant->status === 'inactive')
-                                    <span class="badge badge-danger">Inactive</span>
                                 @else
-                                    <span class="badge" style="background: #fbbf24; color: white;">Pending</span>
+                                    <span class="badge badge-danger">Inactive</span>
                                 @endif
                             </td>
                             <td>

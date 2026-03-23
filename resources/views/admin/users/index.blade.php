@@ -105,7 +105,11 @@
                                 @endif
                             </td>
                             <td>
-                                <div style="display: flex; gap: 8px;">
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <a href="{{ route('admin.users.show', $user->id) }}"
+                                       style="padding: 6px 12px; background: #38a169; color: white; border-radius: 6px; text-decoration: none; font-size: 12px;">
+                                        View bookings
+                                    </a>
                                     <a href="{{ route('admin.users.edit', ['user' => $user->id, 'status' => $status]) }}" 
                                        style="padding: 6px 12px; background: #4299e1; color: white; border-radius: 6px; text-decoration: none; font-size: 12px;">
                                         Edit

@@ -25,6 +25,13 @@ class SightseeingBookingController extends Controller
             ], 401);
         }
 
+        if ($user->status === 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your agent account is pending verification. You cannot create sightseeing bookings until you are approved by admin.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'sightseeing_id' => 'required|exists:sightseeings,id',
             'sightseeing_option_id' => 'nullable|exists:sightseeing_options,id',

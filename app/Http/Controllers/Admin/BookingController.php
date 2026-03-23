@@ -16,6 +16,23 @@ class BookingController extends Controller
     {
         $query = Booking::with(['restaurant', 'user', 'meal'])->orderBy('created_at', 'desc');
 
+        // Free-text search: booking ID, guest name/phone, user name/email, restaurant name
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('id', $search)
+                    ->orWhere('guest_name', 'like', "%{$search}%")
+                    ->orWhere('guest_phone', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('restaurant', function ($restaurantQuery) use ($search) {
+                        $restaurantQuery->where('restaurant_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         // Optional filters
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -27,7 +44,12 @@ class BookingController extends Controller
             $query->where('user_id', $request->user_id);
         }
 
-        $bookings = $query->paginate(15);
+        // Filter by single booking date
+        if ($request->filled('booking_date')) {
+            $query->whereDate('booking_date', $request->booking_date);
+        }
+
+        $bookings = $query->paginate(15)->appends($request->query());
 
         return view('admin.bookings.index', compact('bookings'));
     }

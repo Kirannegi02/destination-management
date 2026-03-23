@@ -424,7 +424,7 @@ class RestaurantController extends Controller
                     ->values()
                     ->toArray(),
                 'star_ratings' => [1, 2, 3, 4, 5],
-                'statuses' => ['active', 'inactive', 'pending'],
+                'statuses' => ['active', 'inactive'],
             ];
 
             // Get all unique amenities from all restaurants

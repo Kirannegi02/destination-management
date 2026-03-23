@@ -113,33 +113,10 @@
 
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                            Local Currency Code
+                            Currency
                         </label>
-                        <input type="text" 
-                               name="local_currency" 
-                               value="{{ old('local_currency') }}"
-                               maxlength="10"
-                               placeholder="e.g., USD, EUR"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                        @error('local_currency')
-                            <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                            Local Price
-                        </label>
-                        <input type="number" 
-                               name="local_price" 
-                               value="{{ old('local_price') }}"
-                               step="0.01"
-                               min="0"
-                               placeholder="e.g., 25.50"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                        @error('local_price')
-                            <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                        @enderror
+                        <input type="text" value="INR" disabled
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background-color:#edf2f7;">
                     </div>
                 </div>
 

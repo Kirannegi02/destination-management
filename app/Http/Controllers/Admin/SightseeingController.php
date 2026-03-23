@@ -51,6 +51,10 @@ class SightseeingController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->boolean('featured')) {
+            $query->where('is_featured', 1);
+        }
+
         if ($request->filled('city')) {
             $query->where('city', $request->city);
         }

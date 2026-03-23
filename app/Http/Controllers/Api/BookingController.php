@@ -12,8 +12,12 @@ use Illuminate\Validation\Rule;
 class BookingController extends Controller
 {
     /**
-    * Create a new restaurant booking (no payment).
-    */
+     * Create a new restaurant booking (no payment).
+     *
+     * Required: restaurant_id, meal_id, date, time, guests (party size).
+     * Aliases merged into guests: number_of_guests, guest_count.
+     * Optional: meal_type, meal_price_inr, guests_details[], guest_name, guest_phone, special_requests.
+     */
     public function store(Request $request)
     {
         $user = auth('api')->user();
@@ -22,6 +26,21 @@ class BookingController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized. Please login first.'
             ], 401);
+        }
+
+        if ($user->status === 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your agent account is pending verification. You cannot create restaurant bookings until you are approved by admin.',
+            ], 403);
+        }
+
+        // Accept number_of_guests / guest_count as aliases for guests (mobile forms)
+        if (!$request->filled('guests') && $request->filled('number_of_guests')) {
+            $request->merge(['guests' => $request->input('number_of_guests')]);
+        }
+        if (!$request->filled('guests') && $request->filled('guest_count')) {
+            $request->merge(['guests' => $request->input('guest_count')]);
         }
 
         $validated = $request->validate([
@@ -201,6 +220,7 @@ class BookingController extends Controller
             'date' => $booking->booking_date?->format('Y-m-d'),
             'time' => $booking->booking_time,
             'guests' => $booking->guests,
+            'number_of_guests' => $booking->guests,
             'guests_details' => $booking->guests_details,
             'guest_name' => $booking->guest_name,
             'guest_phone' => $booking->guest_phone,

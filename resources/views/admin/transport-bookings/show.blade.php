@@ -3,29 +3,48 @@
 @section('page-title', 'Quote Request #' . $booking->id)
 
 @section('content')
-    <div class="card">
+    <div class="card" style="border:none; border-radius:16px; box-shadow:0 10px 30px rgba(15,23,42,0.08);">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
             <div>
-                <h2 class="card-title">Quote Request #{{ $booking->id }}</h2>
-                <p style="color:#718096; font-size:14px;">{{ $booking->created_at?->format('d M Y H:i') }} | @if($booking->status === 'pending')Received@elseif($booking->status === 'confirmed')Quotation Sent@else{{ ucfirst($booking->status) }}@endif</p>
+                <h2 class="card-title" style="font-size:20px; font-weight:700; color:#1e293b;">Quote Request #{{ $booking->id }}</h2>
+                <div style="display:flex; gap:8px; align-items:center; font-size:12px; color:#64748b; margin-top:2px;">
+                    <span>Placed on {{ $booking->created_at?->format('d M Y, H:i') ?? '—' }}</span>
+                    @if($booking->requested_delivery_date)
+                        <span style="width:3px; height:3px; border-radius:999px; background:#cbd5f5;"></span>
+                        <span>Trip type: {{ ucfirst(str_replace('_',' ', $booking->trip_type)) }}</span>
+                    @endif
+                </div>
             </div>
-            <a href="{{ route('admin.transport-bookings.index') }}" style="color:#667eea; text-decoration:none;">← Back to list</a>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span class="badge {{ $booking->status === 'cancelled' ? 'badge-danger' : ($booking->status === 'confirmed' ? 'badge-success' : 'badge-warning') }}"
+                      style="font-size: 13px; padding: 8px 16px; border-radius:999px;">
+                    @if($booking->status === 'pending')
+                        Received
+                    @elseif($booking->status === 'confirmed')
+                        Quotation Sent
+                    @else
+                        {{ ucfirst($booking->status) }}
+                    @endif
+                </span>
+                <a href="{{ route('admin.transport-bookings.index') }}" style="color:#667eea; text-decoration:none; font-size:14px;">← Back to list</a>
+            </div>
         </div>
+
         @if(session('success'))
-            <div style="margin:16px; padding:12px; background:#c6f6d5; color:#22543d; border-radius:6px;">{{ session('success') }}</div>
+            <div style="margin:16px 24px; padding:12px; background:#c6f6d5; color:#22543d; border-radius:8px;">{{ session('success') }}</div>
         @endif
 
-        <div style="padding:20px;">
+        <div style="padding:20px 24px 10px;">
             <h3 style="color:#2d3748; margin-bottom:12px; border-bottom:2px solid #e2e8f0; padding-bottom:8px;">Submitted query – contact</h3>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
-                <div style="background:#f7fafc; padding:16px; border-radius:8px;">
+            <div style="display:grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1.1fr); gap:24px;">
+                <div style="background:linear-gradient(135deg,#eff6ff,#fdf2ff); padding:16px 18px; border-radius:12px;">
                     <p><strong>Name</strong> {{ $booking->guest_name ?? $booking->user?->name ?? '—' }}</p>
                     <p style="color:#4a5568;"><strong>Email</strong> {{ $booking->guest_email ?? $booking->user?->email ?? '—' }}</p>
                     <p style="color:#4a5568;"><strong>Phone</strong> {{ $booking->guest_phone ?? $booking->user?->phone ?? '—' }}</p>
                     @if($booking->guest_country)<p style="color:#4a5568;"><strong>Country</strong> {{ $booking->guest_country }}</p>@endif
                     <p style="color:#718096; font-size:13px; margin-top:12px;"><strong>Submitted at</strong> {{ $booking->created_at?->format('d M Y, H:i') }}</p>
                 </div>
-                <div style="background:#f7fafc; padding:16px; border-radius:8px;">
+                <div style="background:linear-gradient(135deg,#ecfeff,#f5f3ff); padding:16px 18px; border-radius:12px;">
                     <p><strong>Trip type</strong> {{ ucfirst(str_replace('_',' ', $booking->trip_type)) }}</p>
                     <p style="color:#4a5568;"><strong>Passengers</strong> {{ $booking->passengers }}</p>
                     <p style="color:#4a5568;"><strong>Cities / route</strong> {{ implode(' → ', $booking->cities ?? []) }}</p>
@@ -39,7 +58,7 @@
 
         @php $legsByTrain = $booking->legs_by_train ?? []; $cities = $booking->cities ?? []; @endphp
         @if(count($legsByTrain) > 0 && count($cities) > 1)
-            <div style="padding:20px; background:#f0fff4; border-top:1px solid #e2e8f0;">
+            <div style="padding:20px 24px; background:#f0fff4; border-top:1px solid #e2e8f0;">
                 <h4 style="color:#2d3748; margin-bottom:8px;">Travel between cities</h4>
                 <p style="color:#4a5568; font-size:14px;">For each leg: <strong>By your vehicle</strong> = distance charge; <strong>By other vehicle</strong> (e.g. train) = within-city transfers only.</p>
                 <ul style="color:#4a5568; margin-top:8px; padding-left:20px;">
@@ -51,7 +70,7 @@
         @endif
 
         @if($booking->remarks)
-            <div style="padding:20px;">
+            <div style="padding:20px 24px;">
                 <h4 style="color:#2d3748; margin-bottom:8px;">Remarks / special requests</h4>
                 <p style="color:#4a5568; white-space:pre-wrap;">{{ $booking->remarks }}</p>
             </div>
@@ -59,7 +78,7 @@
 
         @php $breakdown = $booking->quote_breakdown ?? []; $lineItems = $breakdown['line_items'] ?? []; @endphp
         @if(count($lineItems) > 0)
-            <div style="padding:20px;">
+            <div style="padding:20px 24px 24px;">
                 <h4 style="color:#2d3748; margin-bottom:12px;">Quotation (calculated from query)</h4>
                 <table class="table" style="font-size:14px;">
                     <thead>
@@ -88,16 +107,16 @@
         @endif
 
         @if($booking->status !== 'cancelled')
-            <div style="padding:20px; border-top:1px solid #e2e8f0;">
-                <h4 style="margin-bottom:12px;">Update status</h4>
-                <form action="{{ route('admin.transport-bookings.status', $booking->id) }}" method="POST" style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div style="padding:16px 24px 20px; border-top:1px solid #e2e8f0; background:#f9fafb; border-radius:0 0 16px 16px;">
+                <h4 style="margin-bottom:10px; color:#1e293b;">Update status</h4>
+                <form action="{{ route('admin.transport-bookings.status', $booking->id) }}" method="POST" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                     @csrf
-                    <select name="status" style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:6px;">
+                    <select name="status" style="padding:8px 12px; border:2px solid #e2e8f0; border-radius:999px; font-size:14px;">
                         <option value="pending" {{ $booking->status === 'pending' ? 'selected' : '' }}>Received</option>
                         <option value="confirmed" {{ $booking->status === 'confirmed' ? 'selected' : '' }}>Quotation Sent</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
-                    <button type="submit" style="padding:8px 16px; background:#4299e1; color:white; border:none; border-radius:6px; cursor:pointer;">Update</button>
+                    <button type="submit" style="padding:8px 18px; background:linear-gradient(135deg,#4f46e5,#ec4899); color:white; border:none; border-radius:999px; font-size:14px; font-weight:600; cursor:pointer;">Update</button>
                 </form>
             </div>
         @endif
