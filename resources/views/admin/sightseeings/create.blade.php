@@ -50,7 +50,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Country</label>
                         <input type="text" name="country" value="{{ old('country', 'Switzerland') }}"
@@ -60,12 +60,6 @@
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">City</label>
                         <input type="text" name="city" value="{{ old('city') }}"
                                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                    </div>
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Display Order</label>
-                        <input type="number" name="display_order" value="{{ old('display_order') }}" min="0"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                        <small style="color:#718096; font-size:12px;">Lower number shows first.</small>
                     </div>
                 </div>
 
@@ -84,46 +78,10 @@
             </div>
 
             <div style="margin-bottom: 30px;">
-                <h3 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 20px;">Pricing & Pax</h3>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px;">
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Standard Price (per pax)</label>
-                        <input type="number" step="0.01" min="0" name="standard_price" value="{{ old('standard_price') }}"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                    </div>
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Currency</label>
-                        <input type="text" value="INR" disabled
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background-color:#edf2f7;">
-                        <input type="hidden" name="currency" value="INR">
-                    </div>
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Default Pax</label>
-                        <input type="number" min="1" name="default_pax" value="{{ old('default_pax', 10) }}"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                        <small style="color:#718096; font-size:12px;">This fills the "No of Pax" column.</small>
-                    </div>
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Standard Price Note</label>
-                        <input type="text" name="standard_price_note" value="{{ old('standard_price_note', $defaultNote) }}"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                    </div>
-                </div>
-
-                <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#2d3748; cursor:pointer;">
-                        <input type="checkbox" name="requires_date" value="1" {{ old('requires_date', true) ? 'checked' : '' }} style="width:18px; height:18px; cursor:pointer;">
-                        Date selection required
-                    </label>
-                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#2d3748; cursor:pointer;">
-                        <input type="checkbox" name="requires_pax" value="1" {{ old('requires_pax', true) ? 'checked' : '' }} style="width:18px; height:18px; cursor:pointer;">
-                        Pax selection required
-                    </label>
-                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#2d3748; cursor:pointer;">
-                        <input type="checkbox" name="is_featured" value="1" {{ old('is_featured') ? 'checked' : '' }} style="width:18px; height:18px; cursor:pointer;">
-                        Feature this experience
-                    </label>
-                </div>
+                <label style="display:flex; align-items:center; gap:8px; font-weight:600; color:#2d3748; cursor:pointer;">
+                    <input type="checkbox" name="is_featured" value="1" {{ old('is_featured') ? 'checked' : '' }} style="width:18px; height:18px; cursor:pointer;">
+                    Feature this experience
+                </label>
             </div>
 
             <div style="margin-bottom: 30px;">
@@ -146,7 +104,7 @@
 
             <div style="margin-bottom: 30px;">
                 <h3 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">Sightseeing Options / Packages</h3>
-                <p style="color:#4a5568; margin-bottom:12px;">Match the options from the spreadsheet (Mt. Titlis variations, Rhine Falls boat durations, Lindt museum, etc.). Add or adjust pricing and pax per option.</p>
+                <p style="color:#4a5568; margin-bottom:12px;">Match the options from the spreadsheet (Mt. Titlis variations, Rhine Falls boat durations, Lindt museum, etc.).</p>
                 <div style="overflow-x:auto;">
                     <table class="table" id="options-table" style="min-width: 900px;">
                         <thead>
@@ -154,7 +112,6 @@
                                 <th>Option Name</th>
                                 <th>Duration (mins)</th>
                                 <th>Base Price</th>
-                                <th>Default Pax</th>
                                 <th>Includes Lunch</th>
                                 <th>Includes Transport</th>
                                 <th>Tags</th>
@@ -178,8 +135,6 @@
                                                style="width: 120px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"></td>
                                     <td><input type="number" step="0.01" min="0" name="options[{{ $idx }}][base_price]" value="{{ $opt['base_price'] ?? '' }}"
                                                style="width: 140px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"></td>
-                                    <td><input type="number" min="1" name="options[{{ $idx }}][default_pax]" value="{{ $opt['default_pax'] ?? '' }}"
-                                               style="width: 110px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"></td>
                                     <td style="text-align:center;">
                                         <input type="checkbox" name="options[{{ $idx }}][includes_lunch]" value="1" {{ !empty($opt['includes_lunch']) ? 'checked' : '' }} style="width:18px; height:18px;">
                                     </td>
@@ -238,8 +193,6 @@
                                style="width: 120px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"></td>
                     <td><input type="number" step="0.01" min="0" name="options[${index}][base_price]" value="${data.base_price ?? ''}"
                                style="width: 140px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"></td>
-                    <td><input type="number" min="1" name="options[${index}][default_pax]" value="${data.default_pax ?? ''}"
-                               style="width: 110px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"></td>
                     <td style="text-align:center;">
                         <input type="checkbox" name="options[${index}][includes_lunch]" value="1" ${data.includes_lunch ? 'checked' : ''} style="width:18px; height:18px;">
                     </td>

@@ -16,7 +16,6 @@ class SightseeingOption extends Model
         'duration_minutes',
         'base_price',
         'currency',
-        'default_pax',
         'includes_lunch',
         'includes_transport',
         'availability_note',
@@ -27,7 +26,6 @@ class SightseeingOption extends Model
     protected $casts = [
         'duration_minutes' => 'integer',
         'base_price' => 'decimal:2',
-        'default_pax' => 'integer',
         'includes_lunch' => 'boolean',
         'includes_transport' => 'boolean',
         'tags' => 'array',

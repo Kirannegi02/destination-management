@@ -23,15 +23,8 @@ class SightseeingController extends Controller
         'city',
         'start_location',
         'end_location',
-        'standard_price',
-        'currency',
-        'default_pax',
-        'standard_price_note',
-        'requires_date',
-        'requires_pax',
         'is_featured',
         'status',
-        'display_order',
     ];
 
     public function index(Request $request)
@@ -63,8 +56,7 @@ class SightseeingController extends Controller
             $query->where('country', $request->country);
         }
 
-        $sightseeings = $query->orderBy('display_order', 'asc')
-            ->orderBy('created_at', 'desc')
+        $sightseeings = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
         $cities = Sightseeing::distinct()->whereNotNull('city')->pluck('city')->sort()->values();
@@ -88,7 +80,6 @@ class SightseeingController extends Controller
 
     public function create()
     {
-        $defaultNote = 'Please select date and pax count for exact pricing for your group';
         $sampleOptions = [
             ['name' => 'Mt. Titlis', 'duration_minutes' => 0, 'base_price' => null, 'includes_lunch' => false],
             ['name' => 'Mt. Titlis with Ice Flyer', 'duration_minutes' => 0, 'base_price' => null, 'includes_lunch' => false],
@@ -102,7 +93,6 @@ class SightseeingController extends Controller
         ];
 
         return view('admin.sightseeings.create', [
-            'defaultNote' => $defaultNote,
             'sampleOptions' => $sampleOptions,
         ]);
     }
@@ -115,10 +105,6 @@ class SightseeingController extends Controller
             if ($request->hasFile('image')) {
                 $upload = ImageService::upload($request->file('image'), 'sightseeings', null, 4096);
                 $data['image'] = $upload['path'];
-            }
-
-            if (empty($data['standard_price_note'])) {
-                $data['standard_price_note'] = 'Please select date and pax count for exact pricing for your group';
             }
 
             $data['created_by'] = optional(auth('admin')->user())->id;
@@ -140,8 +126,7 @@ class SightseeingController extends Controller
     public function edit(string $id)
     {
         $sightseeing = Sightseeing::with('options')->findOrFail($id);
-        $defaultNote = 'Please select date and pax count for exact pricing for your group';
-        return view('admin.sightseeings.edit', compact('sightseeing', 'defaultNote'));
+        return view('admin.sightseeings.edit', compact('sightseeing'));
     }
 
     public function update(Request $request, string $id)
@@ -154,10 +139,6 @@ class SightseeingController extends Controller
             if ($request->hasFile('image')) {
                 $upload = ImageService::update($request->file('image'), $sightseeing->image, 'sightseeings', null, 4096);
                 $data['image'] = $upload['path'];
-            }
-
-            if (empty($data['standard_price_note'])) {
-                $data['standard_price_note'] = 'Please select date and pax count for exact pricing for your group';
             }
 
             $sightseeing->update($data);
@@ -241,15 +222,8 @@ class SightseeingController extends Controller
                 'city' => 'nullable|string|max:100',
                 'start_location' => 'nullable|string|max:255',
                 'end_location' => 'nullable|string|max:255',
-                'standard_price' => 'nullable|numeric|min:0',
-                'currency' => 'nullable|string|max:8',
-                'default_pax' => 'nullable|integer|min:1|max:500',
-                'standard_price_note' => 'nullable|string|max:255',
-                'requires_date' => 'nullable|boolean',
-                'requires_pax' => 'nullable|boolean',
                 'is_featured' => 'nullable|boolean',
                 'status' => 'required|in:active,inactive,pending',
-                'display_order' => 'nullable|integer|min:0|max:9999',
             ]);
 
             if ($validator->fails()) {
@@ -372,22 +346,13 @@ class SightseeingController extends Controller
             'city' => 'nullable|string|max:100',
             'start_location' => 'nullable|string|max:255',
             'end_location' => 'nullable|string|max:255',
-            'standard_price' => 'nullable|numeric|min:0',
-            'currency' => 'nullable|string|max:8',
-            'default_pax' => 'nullable|integer|min:1|max:500',
-            'standard_price_note' => 'nullable|string|max:255',
-            'requires_date' => 'nullable|boolean',
-            'requires_pax' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
-            'display_order' => 'nullable|integer|min:0|max:9999',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
         ];
 
         $validated = $request->validate($rules);
 
-        $validated['requires_date'] = $request->boolean('requires_date', true);
-        $validated['requires_pax'] = $request->boolean('requires_pax', true);
         $validated['is_featured'] = $request->boolean('is_featured');
 
         return $validated;
@@ -419,8 +384,6 @@ class SightseeingController extends Controller
             'base_price' => isset($option['base_price']) && $option['base_price'] !== ''
                 ? (float) $option['base_price'] : null,
             'currency' => $option['currency'] ?? $sightseeing->currency ?? 'CHF',
-            'default_pax' => isset($option['default_pax']) && $option['default_pax'] !== ''
-                ? (int) $option['default_pax'] : $sightseeing->default_pax,
             'includes_lunch' => !empty($option['includes_lunch']),
             'includes_transport' => !empty($option['includes_transport']),
             'availability_note' => $option['availability_note'] ?? null,
@@ -623,21 +586,13 @@ class SightseeingController extends Controller
             return null;
         }
 
-        if (in_array($column, ['requires_date', 'requires_pax', 'is_featured'], true)) {
+        if (in_array($column, ['is_featured'], true)) {
             return $this->normalizeBoolean($value);
         }
 
         if ($column === 'status') {
             $value = strtolower((string) $value);
             return in_array($value, ['active', 'inactive', 'pending'], true) ? $value : 'pending';
-        }
-
-        if ($column === 'standard_price') {
-            return is_numeric($value) ? (float) $value : null;
-        }
-
-        if ($column === 'default_pax' || $column === 'display_order') {
-            return is_numeric($value) ? (int) $value : null;
         }
 
         return $value;
@@ -668,15 +623,8 @@ class SightseeingController extends Controller
                 $sightseeing->city,
                 $sightseeing->start_location,
                 $sightseeing->end_location,
-                $sightseeing->standard_price,
-                $sightseeing->currency,
-                $sightseeing->default_pax,
-                $sightseeing->standard_price_note,
-                $sightseeing->requires_date ? 'Yes' : 'No',
-                $sightseeing->requires_pax ? 'Yes' : 'No',
                 $sightseeing->is_featured ? 'Yes' : 'No',
                 $sightseeing->status,
-                $sightseeing->display_order,
             ];
         }
 
@@ -714,15 +662,8 @@ class SightseeingController extends Controller
                 'Engelberg',
                 'Cable car base',
                 'Summit',
-                null,
-                'CHF',
-                10,
-                'Please select date and pax count for exact pricing for your group',
-                'Yes',
-                'Yes',
                 'No',
                 'active',
-                1,
             ],
         ];
     }

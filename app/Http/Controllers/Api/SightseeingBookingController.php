@@ -7,10 +7,33 @@ use App\Models\Sightseeing;
 use App\Models\SightseeingBooking;
 use App\Models\SightseeingOption;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SightseeingBookingController extends Controller
 {
+    private function itemRules(string $prefix = ''): array
+    {
+        $p = $prefix ? $prefix . '.' : '';
+
+        return [
+            $p . 'sightseeing_id' => 'required|exists:sightseeings,id',
+            $p . 'sightseeing_option_id' => 'nullable|exists:sightseeing_options,id',
+            $p . 'sightseeing_option_ids' => 'nullable|array|min:1',
+            $p . 'sightseeing_option_ids.*' => 'required|integer|exists:sightseeing_options,id',
+            $p . 'date' => 'required|date|after_or_equal:today',
+            $p . 'pax_count' => 'required|integer|min:1',
+            $p . 'guest_name' => 'nullable|string|max:255',
+            $p . 'guest_phone' => 'nullable|string|max:25',
+            $p . 'guests_details' => 'nullable|array',
+            $p . 'guests_details.*.name' => 'required|string|max:255',
+            $p . 'guests_details.*.country' => 'required|string|max:100',
+            $p . 'guests_details.*.phone' => 'nullable|string|max:25',
+            $p . 'special_requests' => 'nullable|string',
+        ];
+    }
+
     /**
      * Create a new sightseeing booking.
      * Request: sightseeing_id, sightseeing_option_id (optional), date, pax_count, guest_name, guest_phone, guests_details, special_requests.
@@ -32,26 +55,136 @@ class SightseeingBookingController extends Controller
             ], 403);
         }
 
-        $validated = $request->validate([
-            'sightseeing_id' => 'required|exists:sightseeings,id',
-            'sightseeing_option_id' => 'nullable|exists:sightseeing_options,id',
-            'date' => 'required|date|after_or_equal:today',
-            'pax_count' => 'required|integer|min:1',
+        // Shorthand for one sightseeing with multiple options.
+        // Expands into items[] for batch creation.
+        if (
+            $request->filled('sightseeing_id')
+            && (
+                is_array($request->input('sightseeing_option_ids'))
+                || is_array($request->input('sightseeing_package_ids'))
+                || is_array($request->input('option_ids'))
+            )
+        ) {
+            $baseItem = $request->except(['sightseeing_option_ids', 'sightseeing_package_ids', 'option_ids']);
+            $optionIds = $request->input('sightseeing_option_ids', $request->input('sightseeing_package_ids', $request->input('option_ids', [])));
+            $items = [];
+            foreach ($optionIds as $optionId) {
+                $item = $baseItem;
+                $item['sightseeing_option_id'] = $optionId;
+                $items[] = $item;
+            }
+            $request->merge(['items' => $items]);
+        }
+
+        // Unified endpoint: single item OR batch items.
+        if (is_array($request->input('items'))) {
+            return $this->storeBatch($request, $user);
+        }
+
+        $validated = $request->validate($this->itemRules());
+
+        $booking = $this->createBooking($user->id, $validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sightseeing booking created successfully.',
+            'data' => $this->transform($booking),
+        ], 201);
+    }
+
+    private function storeBatch(Request $request, $user)
+    {
+        $base = $request->validate([
+            'items' => 'required|array|min:1|max:100',
             'guest_name' => 'nullable|string|max:255',
             'guest_phone' => 'nullable|string|max:25',
-            'guests_details' => 'nullable|array',
-            'guests_details.*.name' => 'required|string|max:255',
-            'guests_details.*.country' => 'required|string|max:100',
-            'guests_details.*.phone' => 'nullable|string|max:25',
-            'special_requests' => 'nullable|string',
         ]);
+        $request->validate($this->itemRules('items.*'));
 
-        $sightseeing = Sightseeing::where('status', 'active')->find($validated['sightseeing_id']);
-        if (!$sightseeing) {
+        $defaults = [
+            'guest_name' => $base['guest_name'] ?? null,
+            'guest_phone' => $base['guest_phone'] ?? null,
+        ];
+
+        $created = [];
+        try {
+            DB::transaction(function () use ($request, $defaults, $user, &$created) {
+                foreach ($request->input('items', []) as $index => $item) {
+                    // Per-item shorthand: one sightseeing with multiple options.
+                    $expandedItems = [];
+                    $itemOptionIds = [];
+                    if (is_array($item['sightseeing_option_ids'] ?? null)) {
+                        $itemOptionIds = $item['sightseeing_option_ids'];
+                    } elseif (is_array($item['sightseeing_package_ids'] ?? null)) {
+                        $itemOptionIds = $item['sightseeing_package_ids'];
+                    } elseif (is_array($item['option_ids'] ?? null)) {
+                        $itemOptionIds = $item['option_ids'];
+                    }
+
+                    if (!empty($item['sightseeing_id']) && !empty($itemOptionIds)) {
+                        foreach ($itemOptionIds as $optionId) {
+                            $row = $item;
+                            $row['sightseeing_option_id'] = $optionId;
+                            unset($row['sightseeing_option_ids']);
+                            unset($row['sightseeing_package_ids']);
+                            unset($row['option_ids']);
+                            $expandedItems[] = $row;
+                        }
+                    } else {
+                        $expandedItems[] = $item;
+                    }
+
+                    foreach ($expandedItems as $expanded) {
+                        $payload = array_merge($defaults, $expanded);
+                        try {
+                            $booking = $this->createBooking((int) $user->id, $payload);
+                            $created[] = $booking;
+                        } catch (ValidationException $e) {
+                            $prefixed = [];
+                            foreach ($e->errors() as $field => $messages) {
+                                $prefixed['items.' . $index . '.' . $field] = $messages;
+                            }
+                            throw ValidationException::withMessages($prefixed);
+                        }
+                    }
+                }
+            });
+        } catch (ValidationException $e) {
+            $first = array_key_first($e->errors());
             return response()->json([
                 'success' => false,
-                'message' => 'Sightseeing not available for booking.',
-            ], 404);
+                'message' => $e->errors()[$first][0] ?? 'Validation failed.',
+                'errors' => $e->errors(),
+                'failed_item_index' => preg_match('/^items\.(\d+)\./', (string) $first, $m) ? (int) $m[1] : null,
+            ], 422);
+        }
+
+        $bookings = SightseeingBooking::with(['sightseeing', 'sightseeingOption'])
+            ->whereIn('id', collect($created)->pluck('id'))
+            ->orderBy('id')
+            ->get();
+
+        $hasMissingPrice = $bookings->contains(fn ($b) => $b->price === null);
+        $combined = $hasMissingPrice ? null : round((float) $bookings->sum('price'), 2);
+
+        return response()->json([
+            'success' => true,
+            'message' => $bookings->count() . ' sightseeing booking(s) created successfully.',
+            'data' => [
+                'bookings' => $bookings->map(fn ($b) => $this->transform($b))->values()->all(),
+                'count' => $bookings->count(),
+                'combined_total_price' => $combined,
+            ],
+        ], 201);
+    }
+
+    private function createBooking(int $userId, array $validated): SightseeingBooking
+    {
+        $sightseeing = Sightseeing::where('status', 'active')->find($validated['sightseeing_id']);
+        if (!$sightseeing) {
+            throw ValidationException::withMessages([
+                'sightseeing_id' => ['Sightseeing not available for booking.'],
+            ]);
         }
 
         $option = null;
@@ -59,21 +192,27 @@ class SightseeingBookingController extends Controller
             $option = SightseeingOption::where('sightseeing_id', $sightseeing->id)
                 ->where('is_active', true)
                 ->find($validated['sightseeing_option_id']);
+
             if (!$option) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Selected sightseeing option not found or inactive.',
-                ], 404);
+                throw ValidationException::withMessages([
+                    'sightseeing_option_id' => ['Selected sightseeing option not found or inactive.'],
+                ]);
             }
         }
 
-        $paxCount = (int) $validated['pax_count'];
-        $currency = $option ? ($option->currency ?? $sightseeing->currency) : $sightseeing->currency;
-        $basePrice = $option ? $option->base_price : $sightseeing->standard_price;
-        $totalPrice = $basePrice !== null ? (float) $basePrice * $paxCount : 0;
+        if (!$option) {
+            throw ValidationException::withMessages([
+                'sightseeing_option_id' => ['Please select a sightseeing package/option to continue booking.'],
+            ]);
+        }
 
-        $booking = SightseeingBooking::create([
-            'user_id' => $user->id,
+        $paxCount = (int) $validated['pax_count'];
+        $currency = $option->currency ?? $sightseeing->currency;
+        $basePrice = $option->base_price;
+        $totalPrice = $basePrice !== null ? (float) $basePrice * $paxCount : null;
+
+        return SightseeingBooking::create([
+            'user_id' => $userId,
             'sightseeing_id' => $sightseeing->id,
             'sightseeing_option_id' => $option?->id,
             'booking_date' => $validated['date'],
@@ -84,15 +223,8 @@ class SightseeingBookingController extends Controller
             'guest_phone' => $validated['guest_phone'] ?? null,
             'guests_details' => $validated['guests_details'] ?? null,
             'special_requests' => $validated['special_requests'] ?? null,
-            'booking_conditions_snapshot' => $sightseeing->booking_conditions,
             'status' => 'pending',
         ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Sightseeing booking created successfully.',
-            'data' => $this->transform($booking),
-        ], 201);
     }
 
     /**
@@ -233,7 +365,6 @@ class SightseeingBookingController extends Controller
             'guest_phone' => $booking->guest_phone,
             'guests_details' => $booking->guests_details,
             'special_requests' => $booking->special_requests,
-            'booking_conditions' => $booking->booking_conditions_snapshot,
             'status' => $booking->status,
             'created_at' => $booking->created_at?->toISOString(),
         ];

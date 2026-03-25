@@ -25,10 +25,6 @@
         <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom:20px;">
             <div>
                 <p><strong>Status:</strong> {{ ucfirst($sightseeing->status) }}</p>
-                <p><strong>Standard Price:</strong> {{ $sightseeing->standard_price !== null ? (($sightseeing->currency ?? 'CHF') . ' ' . number_format($sightseeing->standard_price,2)) : '—' }}</p>
-                <p><strong>Default Pax:</strong> {{ $sightseeing->default_pax ?? '—' }}</p>
-                <p><strong>Standard Price Note:</strong> {{ $sightseeing->standard_price_note ?? '—' }}</p>
-                <p><strong>Requires Date / Pax:</strong> {{ $sightseeing->requires_date ? 'Yes' : 'No' }} / {{ $sightseeing->requires_pax ? 'Yes' : 'No' }}</p>
                 <p><strong>Featured:</strong> {{ $sightseeing->is_featured ? 'Yes' : 'No' }}</p>
                 @if($sightseeing->start_location || $sightseeing->end_location)
                     <p><strong>Start / End:</strong> {{ $sightseeing->start_location ?? '—' }} → {{ $sightseeing->end_location ?? '—' }}</p>
@@ -57,7 +53,6 @@
                             <th>Name</th>
                             <th>Duration</th>
                             <th>Price</th>
-                            <th>Pax</th>
                             <th>Includes</th>
                             <th>Status</th>
                         </tr>
@@ -76,7 +71,6 @@
                                 </td>
                                 <td>{{ $option->duration_minutes ? $option->duration_minutes . ' mins' : '—' }}</td>
                                 <td>{{ $option->base_price !== null ? (($option->currency ?? $sightseeing->currency ?? 'CHF') . ' ' . number_format($option->base_price,2)) : '—' }}</td>
-                                <td>{{ $option->default_pax ?? $sightseeing->default_pax ?? '—' }}</td>
                                 <td>
                                     @php $includes = []; @endphp
                                     @if($option->includes_lunch) @php $includes[] = 'Lunch'; @endphp @endif

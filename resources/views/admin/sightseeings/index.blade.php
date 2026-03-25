@@ -116,8 +116,6 @@
                         <th>ID</th>
                         <th>Experience</th>
                         <th>Location</th>
-                        <th>Standard Price</th>
-                        <th>Default Pax</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -128,9 +126,6 @@
                             <td>{{ $sightseeing->id }}</td>
                             <td>
                                 <strong>{{ $sightseeing->title }}</strong>
-                                @if($sightseeing->standard_price_note)
-                                    <br><small style="color:#718096;">{{ $sightseeing->standard_price_note }}</small>
-                                @endif
                             </td>
                             <td>
                                 {{ $sightseeing->city ?? 'N/A' }}
@@ -138,14 +133,6 @@
                                     , {{ $sightseeing->country }}
                                 @endif
                             </td>
-                            <td>
-                                @if($sightseeing->standard_price !== null)
-                                    {{ $sightseeing->currency ?? 'CHF' }} {{ number_format($sightseeing->standard_price, 2) }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td>{{ $sightseeing->default_pax ?? '—' }}</td>
                             <td>
                                 @if($sightseeing->status === 'active')
                                     <span class="badge badge-success">Active</span>
