@@ -131,8 +131,8 @@
                                 @endif
                             </td>
                             <td>
-                                HD: {{ $guide->half_day_price ? '₹'.number_format($guide->half_day_price, 2) : '—' }}<br>
-                                FD: {{ $guide->full_day_price ? '₹'.number_format($guide->full_day_price, 2) : '—' }}
+                                HD: {{ $guide->half_day_price ? '€'.number_format($guide->half_day_price, 2) : '—' }}<br>
+                                FD: {{ $guide->full_day_price ? '€'.number_format($guide->full_day_price, 2) : '—' }}
                             </td>
                             <td>
                                 @if($guide->status === 'active')

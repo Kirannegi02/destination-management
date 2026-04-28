@@ -74,10 +74,11 @@
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>Zone</th>
                         <th>Location</th>
                         <th>Vehicle</th>
                         <th>Price/km</th>
-                        <th>Price/day</th>
+                        <th>Zone / day</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -86,10 +87,26 @@
                     @foreach($transports as $t)
                         <tr>
                             <td>{{ $t->id }}</td>
+                            <td>{{ $t->zone ? $t->zone->name : '—' }}</td>
                             <td>{{ $t->location ?? '—' }}</td>
                             <td>{{ $t->vehicle ? $t->vehicle->name : 'N/A' }}</td>
                             <td>{{ number_format($t->price_per_km, 2) }}</td>
-                            <td>{{ $t->price_per_day ? number_format($t->price_per_day, 2) : '—' }}</td>
+                            <td>
+                                @php
+                                    $zDay = $t->zone?->price_per_day;
+                                    $rowDay = $t->price_per_day;
+                                    $dayAmt = $zDay !== null && $zDay !== '' ? $zDay : $rowDay;
+                                    $dayCur = $t->zone?->currency ?? $t->currency;
+                                @endphp
+                                @if($dayAmt !== null && $dayAmt !== '')
+                                    {{ number_format((float) $dayAmt, 2) }}@if($dayCur) {{ $dayCur }}@endif
+                                    @if($zDay !== null && $zDay !== '')
+                                        <span style="font-size:11px; color:#718096;">(zone)</span>
+                                    @endif
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td>
                                 @if($t->status === 'active')
                                     <span class="badge badge-success">Active</span>

@@ -69,7 +69,7 @@ class Restaurant extends Model
     }
 
     /**
-     * Get formatted price for display (e.g., ₹1,234.00)
+     * Get formatted price for display (EUR).
      */
     public function getPriceFormattedAttribute()
     {
@@ -77,7 +77,7 @@ class Restaurant extends Model
             return null;
         }
 
-        return '₹' . number_format((float) $this->price, 2);
+        return \App\Support\Currency::format((float) $this->price);
     }
 
     /**

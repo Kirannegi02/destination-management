@@ -12,23 +12,36 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Agent profile fields
-            $table->string('image')->nullable()->after('name');
-            $table->string('agency_name')->nullable()->after('image');
-            $table->string('gst_number', 15)->nullable()->after('agency_name');
-            $table->text('address')->nullable()->after('gst_number');
-            $table->string('state')->nullable()->after('address');
-            $table->string('city')->nullable()->after('state');
-            $table->string('pincode', 10)->nullable()->after('city');
-            
-            // Additional useful fields
-            $table->string('alternate_phone')->nullable()->after('phone');
-            $table->enum('status', ['active', 'inactive', 'pending'])->default('pending')->after('pincode');
-            $table->timestamp('profile_completed_at')->nullable()->after('status');
-            
-            // Indexes
-            $table->index('gst_number');
-            $table->index('status');
+            if (!Schema::hasColumn('users', 'image')) {
+                $table->string('image')->nullable()->after('name');
+            }
+            if (!Schema::hasColumn('users', 'agency_name')) {
+                $table->string('agency_name')->nullable()->after('image');
+            }
+            if (!Schema::hasColumn('users', 'gst_number')) {
+                $table->string('gst_number', 15)->nullable()->after('agency_name');
+            }
+            if (!Schema::hasColumn('users', 'address')) {
+                $table->text('address')->nullable()->after('gst_number');
+            }
+            if (!Schema::hasColumn('users', 'state')) {
+                $table->string('state')->nullable()->after('address');
+            }
+            if (!Schema::hasColumn('users', 'city')) {
+                $table->string('city')->nullable()->after('state');
+            }
+            if (!Schema::hasColumn('users', 'pincode')) {
+                $table->string('pincode', 10)->nullable()->after('city');
+            }
+            if (!Schema::hasColumn('users', 'alternate_phone')) {
+                $table->string('alternate_phone')->nullable()->after('phone');
+            }
+            if (!Schema::hasColumn('users', 'status')) {
+                $table->enum('status', ['active', 'inactive', 'pending'])->default('pending')->after('pincode');
+            }
+            if (!Schema::hasColumn('users', 'profile_completed_at')) {
+                $table->timestamp('profile_completed_at')->nullable()->after('status');
+            }
         });
     }
 

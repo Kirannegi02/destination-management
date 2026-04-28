@@ -100,20 +100,38 @@
                                     <small style="color: #718096;">ID: {{ $booking->restaurant_id }}</small>
                                 </td>
                                 <td style="padding: 12px;">
-                                    @if($booking->meal)
-                                        <div style="font-weight: 600;">
-                                            <a href="{{ route('admin.meals.show', $booking->meal_id) }}" style="color: #2b6cb0; text-decoration: none;">
-                                                {{ $booking->meal->meal_type_label }}
-                                            </a>
-                                        </div>
-                                        @if($booking->meal_price_inr)
-                                            <div style="color: #48bb78;">₹{{ number_format((float) $booking->meal_price_inr, 2) }}</div>
-                                        @endif
-                                        <small style="color: #718096;">Meal ID: {{ $booking->meal_id }}</small>
-                                    @elseif($booking->meal_type)
-                                        <div style="font-weight: 600;">{{ $booking->meal_type }}</div>
-                                        @if($booking->meal_price_inr)
-                                            <div style="color: #48bb78;">₹{{ number_format((float) $booking->meal_price_inr, 2) }}</div>
+                                    @php
+                                        $mRows = $booking->meals_data ?? [];
+                                        if (empty($mRows) && $booking->meal_id) {
+                                            $mRows = [[
+                                                'meal_id'         => $booking->meal_id,
+                                                'meal_type_label' => $booking->meal?->meal_type_label ?? $booking->meal_type ?? '—',
+                                                'price_per_person'=> $booking->meal_price ? (float)$booking->meal_price : null,
+                                                'guests'          => $booking->guests,
+                                            ]];
+                                        }
+                                        $hasSupplements = collect($mRows)->contains(fn($m) => !empty($m['supplements_selected']));
+                                    @endphp
+                                    @if(count($mRows))
+                                        @foreach($mRows as $mRow)
+                                            <div style="font-weight: 600; font-size: 13px;">
+                                                @if(!empty($mRow['meal_id']))
+                                                    <a href="{{ route('admin.meals.show', $mRow['meal_id']) }}" style="color: #2b6cb0; text-decoration: none;">
+                                                        {{ $mRow['meal_type_label'] ?? '—' }}
+                                                    </a>
+                                                @else
+                                                    {{ $mRow['meal_type_label'] ?? '—' }}
+                                                @endif
+                                            </div>
+                                            @if(!empty($mRow['price_per_person']))
+                                                <div style="color: #48bb78; font-size: 12px;">
+                                                    €{{ number_format((float)$mRow['price_per_person'], 2) }}
+                                                    @if(!empty($mRow['guests'])) × {{ $mRow['guests'] }}@endif
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                        @if($hasSupplements)
+                                            <small style="color: #805ad5;">+ supplements</small>
                                         @endif
                                     @else
                                         <span style="color: #718096;">N/A</span>
@@ -134,7 +152,7 @@
                                 <td style="padding: 12px;">{{ $booking->number_of_guests ?? $booking->guests ?? '—' }}</td>
                                 <td style="padding: 12px;">
                                     @if($booking->estimated_total !== null)
-                                        ₹{{ number_format((float) $booking->estimated_total, 2) }}
+                                        €{{ number_format((float) $booking->estimated_total, 2) }}
                                     @else
                                         N/A
                                     @endif

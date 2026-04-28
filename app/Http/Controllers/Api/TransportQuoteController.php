@@ -49,7 +49,13 @@ class TransportQuoteController extends Controller
             'legs.*.drop_city_a' => 'nullable|string|max:500',
             'legs.*.pickup_city_b' => 'nullable|string|max:500',
             'legs.*.drop_city_b' => 'nullable|string|max:500',
+            'travel_mode' => 'nullable|in:our_vehicle,train',
+            'vehicle_id' => 'nullable|integer|exists:vehicles,id',
+            'zone_ids' => 'nullable|array',
+            'zone_ids.*' => 'nullable|integer|exists:transport_zones,id',
         ]);
+
+        $validated = $this->normalizeTransportQuoteInput($validated);
 
         $result = $this->quoteService->buildQuote($validated);
 
@@ -96,6 +102,10 @@ class TransportQuoteController extends Controller
             'legs.*.drop_city_a' => 'nullable|string|max:500',
             'legs.*.pickup_city_b' => 'nullable|string|max:500',
             'legs.*.drop_city_b' => 'nullable|string|max:500',
+            'travel_mode' => 'nullable|in:our_vehicle,train',
+            'vehicle_id' => 'nullable|integer|exists:vehicles,id',
+            'zone_ids' => 'nullable|array',
+            'zone_ids.*' => 'nullable|integer|exists:transport_zones,id',
             'remarks' => 'nullable|string|max:2000',
             'guest_name' => 'nullable|string|max:255',
             'guest_email' => 'nullable|email',
@@ -117,14 +127,17 @@ class TransportQuoteController extends Controller
 
         $validated = $request->validate($rules);
 
-        $quoteInput = [
+        $quoteInput = $this->normalizeTransportQuoteInput([
             'trip_type' => $validated['trip_type'],
             'passengers' => $validated['passengers'],
             'cities' => $validated['cities'],
             'days_per_city' => $validated['days_per_city'],
-            'legs_by_train' => $validated['legs_by_train'] ?? [],
+            'legs_by_train' => $validated['legs_by_train'] ?? null,
             'legs' => $validated['legs'] ?? [],
-        ];
+            'travel_mode' => $validated['travel_mode'] ?? null,
+            'vehicle_id' => $validated['vehicle_id'] ?? null,
+            'zone_ids' => $validated['zone_ids'] ?? null,
+        ]);
 
         $result = $this->quoteService->buildQuote($quoteInput);
         if (!$result['success']) {
@@ -135,6 +148,11 @@ class TransportQuoteController extends Controller
         }
 
         $vehicle = $result['vehicle'] ? \App\Models\Vehicle::find($result['vehicle']['id']) : null;
+
+        $zoneIdsForStore = $this->normalizeTransportQuoteInput([
+            'cities' => $validated['cities'],
+            'zone_ids' => $validated['zone_ids'] ?? null,
+        ])['zone_ids'] ?? [];
 
         $quoteRequest = TransportBooking::create([
             'user_id' => $user?->id,
@@ -151,6 +169,7 @@ class TransportQuoteController extends Controller
                 'total_amount' => $result['total_amount'],
                 'currency' => $result['currency'],
                 'vehicle' => $result['vehicle'],
+                'zone_ids' => $zoneIdsForStore,
             ],
             'total_amount' => $result['total_amount'],
             'currency' => $result['currency'],
@@ -226,6 +245,46 @@ class TransportQuoteController extends Controller
             'success' => true,
             'data' => $this->transformBooking($booking),
         ], 200);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    protected function normalizeTransportQuoteInput(array $validated): array
+    {
+        $cities = array_values(array_map('trim', (array) ($validated['cities'] ?? [])));
+        $numLegs = max(0, count($cities) - 1);
+        $legsByTrain = $validated['legs_by_train'] ?? null;
+        $mode = $validated['travel_mode'] ?? 'our_vehicle';
+        $defaultTrain = ($mode === 'train');
+
+        if (!is_array($legsByTrain)) {
+            $validated['legs_by_train'] = array_fill(0, $numLegs, $defaultTrain);
+        } else {
+            $out = [];
+            for ($i = 0; $i < $numLegs; $i++) {
+                $out[] = array_key_exists($i, $legsByTrain)
+                    ? filter_var($legsByTrain[$i], FILTER_VALIDATE_BOOLEAN)
+                    : $defaultTrain;
+            }
+            $validated['legs_by_train'] = $out;
+        }
+
+        $numCityStops = count($validated['cities'] ?? []);
+        $zoneIds = $validated['zone_ids'] ?? null;
+        if (!is_array($zoneIds)) {
+            $validated['zone_ids'] = array_fill(0, $numCityStops, null);
+        } else {
+            $padded = [];
+            for ($i = 0; $i < $numCityStops; $i++) {
+                $v = $zoneIds[$i] ?? null;
+                $padded[] = ($v !== null && $v !== '') ? (int) $v : null;
+            }
+            $validated['zone_ids'] = $padded;
+        }
+
+        return $validated;
     }
 
     protected function transformBooking(TransportBooking $booking): array

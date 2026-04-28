@@ -45,7 +45,7 @@
             <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
                 <h4 style="margin-bottom:8px; color:#2d3748;">Availability</h4>
                 <p style="color:#4a5568;">Date Window: <strong>{{ $guide->available_from_date ? $guide->available_from_date->format('d M Y') : '—' }} - {{ $guide->available_to_date ? $guide->available_to_date->format('d M Y') : '—' }}</strong></p>
-                <p style="color:#4a5568;">Daily: <strong>{{ $guide->daily_start_time ? $guide->daily_start_time->format('H:i') : '—' }} - {{ $guide->daily_end_time ? $guide->daily_end_time->format('H:i') : '—' }}</strong></p>
+                <p style="color:#4a5568;">Daily: <strong>{{ $guide->daily_start_time ? substr($guide->daily_start_time, 0, 5) : '—' }} - {{ $guide->daily_end_time ? substr($guide->daily_end_time, 0, 5) : '—' }}</strong></p>
                 <p style="color:#4a5568;">Available Days: <strong>{{ implode(', ', $guide->available_days ?? []) ?: 'All' }}</strong></p>
                 <p style="color:#4a5568;">Blackout: <strong>{{ implode(', ', $guide->blackout_dates ?? []) ?: 'None' }}</strong></p>
             </div>
@@ -60,9 +60,9 @@
 
             <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
                 <h4 style="margin-bottom:8px; color:#2d3748;">Pricing</h4>
-                <p style="color:#4a5568;">Half Day: <strong>{{ $guide->half_day_price ? '₹'.number_format($guide->half_day_price,2) : 'N/A' }}</strong></p>
-                <p style="color:#4a5568;">Full Day: <strong>{{ $guide->full_day_price ? '₹'.number_format($guide->full_day_price,2) : 'N/A' }}</strong></p>
-                <p style="color:#4a5568;">Extra Hour: <strong>{{ $guide->extra_hour_price ? '₹'.number_format($guide->extra_hour_price,2) : 'N/A' }}</strong></p>
+                <p style="color:#4a5568;">Half Day: <strong>{{ $guide->half_day_price ? '€'.number_format($guide->half_day_price,2) : 'N/A' }}</strong></p>
+                <p style="color:#4a5568;">Full Day: <strong>{{ $guide->full_day_price ? '€'.number_format($guide->full_day_price,2) : 'N/A' }}</strong></p>
+                <p style="color:#4a5568;">Extra Hour: <strong>{{ $guide->extra_hour_price ? '€'.number_format($guide->extra_hour_price,2) : 'N/A' }}</strong></p>
             </div>
         </div>
 

@@ -70,7 +70,7 @@ class ServiceController extends Controller
         ]);
 
         $validated['slug'] = Str::slug($validated['name']) . '-' . time();
-        $validated['currency'] = $validated['currency'] ?? 'INR';
+        $validated['currency'] = $validated['currency'] ?? 'EUR';
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
         Service::create($validated);

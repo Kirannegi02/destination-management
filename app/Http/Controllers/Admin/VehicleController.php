@@ -400,7 +400,7 @@ class VehicleController extends Controller
             $payload['status'] = 'pending';
         }
         if (empty($payload['currency'])) {
-            $payload['currency'] = 'INR';
+            $payload['currency'] = 'EUR';
         }
         if (!isset($payload['sort_order']) || $payload['sort_order'] === '') {
             $payload['sort_order'] = 0;
@@ -452,7 +452,7 @@ class VehicleController extends Controller
                 $v->capacity_seats,
                 $v->description,
                 $v->image,
-                $v->currency ?? 'INR',
+                $v->currency ?? 'EUR',
                 $v->status,
                 $v->sort_order ?? 0,
             ];

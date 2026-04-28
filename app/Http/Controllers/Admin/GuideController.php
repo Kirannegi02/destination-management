@@ -18,20 +18,56 @@ class GuideController extends Controller
      * Columns used for import/export.
      */
     private array $importableColumns = [
+        // ── Identity ──────────────────────────────────────────────
         'title',
-        'description',
+        'full_name',
+        'gender',
+        'date_of_birth',
+        'nationality',
+        // ── Contact ───────────────────────────────────────────────
+        'phone_country_code',
+        'phone_number',
+        'email',
+        'whatsapp_number',
+        'emergency_contact_number',
+        // ── Location & Language ────────────────────────────────────
         'country',
         'city',
-        'language',
-        'service_date',
-        'start_point',
-        'end_point',
-        'start_time',
-        'end_time',
-        'duration_hours',
+        'primary_language',
+        'other_languages',
+        'language_proficiency',
+        // ── Experience ────────────────────────────────────────────
+        'years_experience',
+        'short_bio',
+        'description',
+        // ── Availability ──────────────────────────────────────────
+        'available_from_date',
+        'available_to_date',
+        'available_days',
+        'daily_start_time',
+        'daily_end_time',
+        'max_bookings_per_day',
+        // ── Pricing ───────────────────────────────────────────────
         'half_day_price',
         'full_day_price',
         'extra_hour_price',
+        // ── ID & Verification ─────────────────────────────────────
+        'id_proof_type',
+        'id_proof_number',
+        'id_proof_path',
+        'license_path',
+        'police_verification',
+        'verification_status',
+        // ── Indian Customer Settings ──────────────────────────────
+        'experience_indian_customers',
+        'indian_tours_completed',
+        'indian_language_support',
+        'indian_special_notes',
+        // ── Display Settings ──────────────────────────────────────
+        'display_on_website',
+        'featured_guide',
+        // ── Media & Misc ──────────────────────────────────────────
+        'profile_photo',
         'status',
         'notes',
     ];
@@ -107,11 +143,17 @@ class GuideController extends Controller
 
     public function store(Request $request)
     {
-        DB::transaction(function () use ($request) {
-            $validated = $this->validateGuide($request);
-            $guide = Guide::create($validated);
-            $this->syncPackages($guide, $request);
-        });
+        try {
+            DB::transaction(function () use ($request) {
+                $validated = $this->validateGuide($request);
+                $guide = Guide::create($validated);
+                $this->syncPackages($guide, $request);
+            });
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Could not save the guide. Please check all fields and try again. (' . $e->getMessage() . ')');
+        }
 
         return redirect()->route('admin.guides.index')->with('success', 'Guide created successfully.');
     }
@@ -131,11 +173,18 @@ class GuideController extends Controller
     public function update(Request $request, string $id)
     {
         $guide = Guide::findOrFail($id);
-        DB::transaction(function () use ($request, $guide) {
-            $validated = $this->validateGuide($request, $guide);
-            $guide->update($validated);
-            $this->syncPackages($guide, $request);
-        });
+
+        try {
+            DB::transaction(function () use ($request, $guide) {
+                $validated = $this->validateGuide($request, $guide);
+                $guide->update($validated);
+                $this->syncPackages($guide, $request);
+            });
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Could not save the guide. Please check all fields and try again. (' . $e->getMessage() . ')');
+        }
 
         return redirect()->route('admin.guides.index')->with('success', 'Guide updated successfully.');
     }
@@ -202,22 +251,48 @@ class GuideController extends Controller
             $payload = $this->sanitizeImportPayload($assoc);
 
             $validator = Validator::make($payload, [
-                'title' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'country' => 'nullable|string|max:100',
-                'city' => 'nullable|string|max:100',
-                'language' => 'nullable|string|max:100',
-                'service_date' => 'nullable|date',
-                'start_point' => 'nullable|string|max:255',
-                'end_point' => 'nullable|string|max:255',
-                'start_time' => 'nullable|date_format:H:i',
-                'end_time' => 'nullable|date_format:H:i',
-                'duration_hours' => 'nullable|integer|min:1|max:72',
-                'half_day_price' => 'nullable|numeric|min:0',
-                'full_day_price' => 'nullable|numeric|min:0',
-                'extra_hour_price' => 'nullable|numeric|min:0',
-                'status' => 'required|in:active,inactive',
-                'notes' => 'nullable|string',
+                'title'                      => 'required|string|max:255',
+                'full_name'                  => 'nullable|string|max:255',
+                'gender'                     => 'nullable|in:male,female,other',
+                'date_of_birth'              => 'nullable|date',
+                'nationality'                => 'nullable|string|max:80',
+                'phone_country_code'         => 'nullable|string|max:10',
+                'phone_number'               => 'nullable|string|max:30',
+                'email'                      => 'nullable|email|max:255',
+                'whatsapp_number'            => 'nullable|string|max:30',
+                'emergency_contact_number'   => 'nullable|string|max:30',
+                'country'                    => 'nullable|string|max:100',
+                'city'                       => 'nullable|string|max:100',
+                'primary_language'           => 'nullable|string|max:100',
+                'other_languages'            => 'nullable',
+                'language_proficiency'       => 'nullable|string|max:50',
+                'years_experience'           => 'nullable|integer|min:0|max:80',
+                'short_bio'                  => 'nullable|string',
+                'description'               => 'nullable|string',
+                'available_from_date'        => 'nullable|date',
+                'available_to_date'          => 'nullable|date',
+                'available_days'             => 'nullable',
+                'daily_start_time'           => 'nullable|date_format:H:i',
+                'daily_end_time'             => 'nullable|date_format:H:i',
+                'max_bookings_per_day'       => 'nullable|integer|min:1',
+                'half_day_price'             => 'nullable|numeric|min:0',
+                'full_day_price'             => 'nullable|numeric|min:0',
+                'extra_hour_price'           => 'nullable|numeric|min:0',
+                'id_proof_type'              => 'nullable|string|max:100',
+                'id_proof_number'            => 'nullable|string|max:120',
+                'id_proof_path'              => 'nullable|string|max:1000',
+                'license_path'               => 'nullable|string|max:1000',
+                'police_verification'        => 'nullable|boolean',
+                'verification_status'        => 'nullable|in:pending,approved,rejected',
+                'experience_indian_customers'=> 'nullable|boolean',
+                'indian_tours_completed'     => 'nullable|integer|min:0',
+                'indian_language_support'    => 'nullable',
+                'indian_special_notes'       => 'nullable|string',
+                'display_on_website'         => 'nullable|boolean',
+                'featured_guide'             => 'nullable|boolean',
+                'profile_photo'              => 'nullable|string|max:1000',
+                'status'                     => 'required|in:active,inactive',
+                'notes'                      => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
@@ -226,16 +301,19 @@ class GuideController extends Controller
                 continue;
             }
 
-            $match = array_filter([
-                'title' => $payload['title'] ?? null,
-                'service_date' => $payload['service_date'] ?? null,
-                'city' => $payload['city'] ?? null,
-            ]);
+            // Use email as the unique key; fall back to full_name, then title+city
+            if (!empty($payload['email'])) {
+                $match = ['email' => $payload['email']];
+            } elseif (!empty($payload['full_name'])) {
+                $match = ['full_name' => $payload['full_name']];
+            } else {
+                $match = array_filter([
+                    'title' => $payload['title'],
+                    'city'  => $payload['city'] ?? null,
+                ]);
+            }
 
-            $guide = Guide::updateOrCreate(
-                !empty($match) ? $match : ['title' => $payload['title']],
-                $payload
-            );
+            $guide = Guide::updateOrCreate($match, $payload);
 
             if ($guide->wasRecentlyCreated) {
                 $created++;
@@ -246,11 +324,9 @@ class GuideController extends Controller
             }
         }
 
-        $message = "Import completed. Created: {$created}, Updated: {$updated}, Skipped: {$skipped}, Unchanged: {$unchanged}.";
-
         $flash = $created > 0 || $updated > 0
-            ? ['success' => 'Guide data imported successfully. ' . $message]
-            : ['error' => 'No new data imported. ' . $message];
+            ? ['success' => 'Guide data imported successfully.']
+            : ['error' => 'No new data was imported.'];
 
         return back()
             ->with($flash)
@@ -433,8 +509,14 @@ class GuideController extends Controller
         $rows = [];
         foreach ($dom->getElementsByTagName('tr') as $tr) {
             $row = [];
-            foreach ($tr->getElementsByTagName('td') as $td) {
-                $row[] = trim($td->textContent);
+            // Read both <th> (header cells) and <td> (data cells)
+            foreach ($tr->childNodes as $node) {
+                if (!($node instanceof \DOMElement)) {
+                    continue;
+                }
+                if (in_array(strtolower($node->tagName), ['td', 'th'], true)) {
+                    $row[] = trim($node->textContent);
+                }
             }
             if (!empty($row)) {
                 $rows[] = $row;
@@ -481,9 +563,44 @@ class GuideController extends Controller
             $value = $row[$column] ?? null;
             $payload[$column] = $this->normalizeValue($column, $value);
         }
+
         if (empty($payload['status'])) {
             $payload['status'] = 'active';
         }
+        if (!isset($payload['verification_status']) || $payload['verification_status'] === null) {
+            $payload['verification_status'] = 'pending';
+        }
+        if ($payload['police_verification'] === null) {
+            $payload['police_verification'] = false;
+        }
+        if ($payload['experience_indian_customers'] === null) {
+            $payload['experience_indian_customers'] = false;
+        }
+        if ($payload['display_on_website'] === null) {
+            $payload['display_on_website'] = true;
+        }
+        if ($payload['featured_guide'] === null) {
+            $payload['featured_guide'] = false;
+        }
+        if ($payload['indian_tours_completed'] === null) {
+            $payload['indian_tours_completed'] = 0;
+        }
+
+        // Aliases for profile photo column
+        if (empty($payload['profile_photo'])) {
+            foreach (['photo', 'photo_url', 'image', 'image_url', 'guide_photo', 'profile_image'] as $alias) {
+                if (!empty($row[$alias])) {
+                    $payload['profile_photo'] = $this->normalizeValue('profile_photo', $row[$alias]);
+                    break;
+                }
+            }
+        }
+
+        // Sync language field from primary_language for backward compatibility
+        if (empty($payload['language']) && !empty($payload['primary_language'])) {
+            $payload['language'] = $payload['primary_language'];
+        }
+
         return $payload;
     }
 
@@ -498,25 +615,108 @@ class GuideController extends Controller
             return null;
         }
 
+        // ── Enums ────────────────────────────────────────────────
         if ($column === 'status') {
-            $value = strtolower((string) $value);
-            return in_array($value, ['active', 'inactive'], true) ? $value : 'active';
+            $v = strtolower((string) $value);
+            return in_array($v, ['active', 'inactive'], true) ? $v : 'active';
         }
 
-        if ($column === 'duration_hours') {
+        if ($column === 'gender') {
+            $v = strtolower((string) $value);
+            return in_array($v, ['male', 'female', 'other'], true) ? $v : null;
+        }
+
+        if ($column === 'verification_status') {
+            $v = strtolower((string) $value);
+            return in_array($v, ['pending', 'approved', 'rejected'], true) ? $v : 'pending';
+        }
+
+        if ($column === 'language_proficiency') {
+            $v = strtolower((string) $value);
+            $allowed = ['basic', 'conversational', 'fluent', 'native'];
+            // Accept flexible casing/spelling
+            foreach ($allowed as $a) {
+                if (str_starts_with($v, substr($a, 0, 4))) {
+                    return ucfirst($a);
+                }
+            }
+            return (string) $value;
+        }
+
+        // ── Integers ─────────────────────────────────────────────
+        if (in_array($column, ['years_experience', 'max_bookings_per_day', 'indian_tours_completed'], true)) {
             return is_numeric($value) ? (int) $value : null;
         }
 
+        // ── Decimals ─────────────────────────────────────────────
         if (in_array($column, ['half_day_price', 'full_day_price', 'extra_hour_price'], true)) {
             return is_numeric($value) ? (float) $value : null;
         }
 
-        if ($column === 'service_date') {
-            return $value;
+        // ── Booleans (accept yes/no/1/0/true/false) ──────────────
+        if (in_array($column, [
+            'police_verification', 'experience_indian_customers',
+            'display_on_website', 'featured_guide',
+        ], true)) {
+            $v = strtolower(trim((string) $value));
+            if (in_array($v, ['1', 'yes', 'true', 'on'], true))  return true;
+            if (in_array($v, ['0', 'no', 'false', 'off'], true)) return false;
+            return null;
         }
 
-        if (in_array($column, ['start_time', 'end_time'], true)) {
-            return $value;
+        // ── Array fields (comma/semicolon/pipe separated) ─────────
+        if (in_array($column, ['other_languages', 'available_days', 'indian_language_support'], true)) {
+            if (is_array($value)) {
+                $items = $value;
+            } else {
+                $items = preg_split('/[,;|]+/', (string) $value) ?: [];
+            }
+            $items = array_values(array_filter(array_map('trim', $items)));
+            return empty($items) ? null : $items;
+        }
+
+        // ── Date fields — handle Excel serial numbers ──────────────
+        if (in_array($column, ['date_of_birth', 'available_from_date', 'available_to_date'], true)) {
+            $str = trim((string) $value);
+            if ($str === '') return null;
+
+            // Excel date serial number (days since 1900-01-01, with Lotus bug offset)
+            if (is_numeric($str) && (int)$str > 1000 && !str_contains($str, '-') && !str_contains($str, '/')) {
+                try {
+                    $date = \Carbon\Carbon::create(1899, 12, 30)->addDays((int)$str);
+                    return $date->format('Y-m-d');
+                } catch (\Exception $e) {
+                    return null;
+                }
+            }
+
+            // Already a string date — return as-is for Laravel's date validator
+            return $str;
+        }
+
+        // ── Time fields (HH:MM) — handle Excel decimal and HH:MM:SS ─
+        if (in_array($column, ['daily_start_time', 'daily_end_time'], true)) {
+            $str = trim((string) $value);
+            if ($str === '') return null;
+
+            // Excel stores time as a decimal fraction of a day (e.g. 09:00 = 0.375)
+            if (is_numeric($str) && $str >= 0 && $str < 1) {
+                $totalMinutes = (int) round((float) $str * 1440);
+                return sprintf('%02d:%02d', intdiv($totalMinutes, 60), $totalMinutes % 60);
+            }
+
+            // Strip seconds from HH:MM:SS
+            if (preg_match('/^(\d{1,2}):(\d{2})/', $str, $m)) {
+                return sprintf('%02d:%02d', (int)$m[1], (int)$m[2]);
+            }
+
+            return null;
+        }
+
+        // ── URL / path fields (photo + documents) ─────────────────
+        if (in_array($column, ['profile_photo', 'id_proof_path', 'license_path'], true)) {
+            $v = trim((string) $value);
+            return $v !== '' ? $v : null;
         }
 
         return $value;
@@ -534,21 +734,49 @@ class GuideController extends Controller
         $rows[] = $this->importableColumns;
 
         foreach ($guides as $guide) {
+            $join = fn($v) => is_array($v) ? implode(', ', $v) : ($v ?? '');
+
             $rows[] = [
                 $guide->title,
-                $guide->description,
+                $guide->full_name,
+                $guide->gender,
+                $guide->date_of_birth ? $guide->date_of_birth->format('Y-m-d') : null,
+                $guide->nationality,
+                $guide->phone_country_code,
+                $guide->phone_number,
+                $guide->email,
+                $guide->whatsapp_number,
+                $guide->emergency_contact_number,
                 $guide->country,
                 $guide->city,
-                $guide->language,
-                $guide->service_date ? $guide->service_date->format('Y-m-d') : null,
-                $guide->start_point,
-                $guide->end_point,
-                $guide->start_time ? $guide->start_time->format('H:i') : null,
-                $guide->end_time ? $guide->end_time->format('H:i') : null,
-                $guide->duration_hours,
+                $guide->primary_language,
+                $join($guide->other_languages),
+                $guide->language_proficiency,
+                $guide->years_experience,
+                $guide->short_bio,
+                $guide->description,
+                $guide->available_from_date ? $guide->available_from_date->format('Y-m-d') : null,
+                $guide->available_to_date   ? $guide->available_to_date->format('Y-m-d')   : null,
+                $join($guide->available_days),
+                $guide->daily_start_time ? substr($guide->daily_start_time, 0, 5) : null,
+                $guide->daily_end_time   ? substr($guide->daily_end_time,   0, 5) : null,
+                $guide->max_bookings_per_day,
                 $guide->half_day_price,
                 $guide->full_day_price,
                 $guide->extra_hour_price,
+                $guide->id_proof_type,
+                $guide->id_proof_number,
+                \App\Services\ImageService::getUrl($guide->id_proof_path),
+                \App\Services\ImageService::getUrl($guide->license_path),
+                $guide->police_verification ? 'yes' : 'no',
+                $guide->verification_status ?? 'pending',
+                $guide->experience_indian_customers ? 'yes' : 'no',
+                $guide->indian_tours_completed ?? 0,
+                $join($guide->indian_language_support),
+                $guide->indian_special_notes,
+                $guide->display_on_website ? 'yes' : 'no',
+                $guide->featured_guide     ? 'yes' : 'no',
+                \App\Services\ImageService::getUrl($guide->profile_photo),
                 $guide->status,
                 $guide->notes,
             ];
@@ -559,9 +787,11 @@ class GuideController extends Controller
 
     private function generateHtmlExcel(array $rows): string
     {
+        // Use <td> for ALL rows (including header) so parseHtmlTable can read them back.
+        // Bold styling is used to visually distinguish the header row.
         $html = '<table border="1"><thead><tr>';
         foreach ($rows[0] as $heading) {
-            $html .= '<th>' . htmlspecialchars((string) $heading) . '</th>';
+            $html .= '<td><strong>' . htmlspecialchars((string) $heading) . '</strong></td>';
         }
         $html .= '</tr></thead><tbody>';
 
@@ -579,27 +809,54 @@ class GuideController extends Controller
 
     private function sampleRows(): array
     {
-        return [
-            $this->importableColumns,
-            [
-                '3 Hour Guide Service',
-                'City highlights with local expert',
-                'India',
-                'Delhi',
-                'English',
-                '2026-01-10',
-                'Connaught Place',
-                'India Gate',
-                '10:00',
-                '13:00',
-                3,
-                1500,
-                2800,
-                450,
-                'active',
-                'Arrive 10 minutes early at meeting point.',
-            ],
+        $headers = $this->importableColumns;
+
+        $sample = [
+            '3 Hour City Guide Service',          // title
+            'Rahul Sharma',                       // full_name
+            'male',                               // gender  (male/female/other)
+            '1990-05-15',                         // date_of_birth  (YYYY-MM-DD)
+            'Indian',                             // nationality
+            '+91',                                // phone_country_code
+            '9876543210',                         // phone_number
+            'rahul@example.com',                  // email  ← used as unique key on re-import
+            '9876543210',                         // whatsapp_number
+            '9000000001',                         // emergency_contact_number
+            'India',                              // country
+            'Delhi',                              // city
+            'English',                            // primary_language
+            'Hindi, French',                      // other_languages  (comma-separated)
+            'Fluent',                             // language_proficiency  (Basic/Conversational/Fluent/Native)
+            5,                                    // years_experience
+            'Expert local guide for Delhi tours.',// short_bio
+            'Rahul has guided over 500 groups.', // description
+            '2026-01-01',                         // available_from_date  (YYYY-MM-DD)
+            '2026-12-31',                         // available_to_date  (YYYY-MM-DD)
+            'Monday, Tuesday, Wednesday, Thursday, Friday', // available_days  (comma-separated)
+            '09:00',                              // daily_start_time  (HH:MM)
+            '18:00',                              // daily_end_time  (HH:MM)
+            3,                                    // max_bookings_per_day
+            1500,                                 // half_day_price  (EUR)
+            2800,                                 // full_day_price  (EUR)
+            450,                                  // extra_hour_price  (EUR)
+            'Aadhar Card',                        // id_proof_type
+            'XXXX-XXXX-1234',                     // id_proof_number
+            'https://example.com/id_proof.jpg',   // id_proof_path  (URL)
+            'https://example.com/license.jpg',    // license_path  (URL)
+            'yes',                                // police_verification  (yes/no)
+            'approved',                           // verification_status  (pending/approved/rejected)
+            'yes',                                // experience_indian_customers  (yes/no)
+            12,                                   // indian_tours_completed
+            'Hindi, Tamil',                       // indian_language_support  (comma-separated)
+            'Experienced with Indian group dynamics.', // indian_special_notes
+            'yes',                                // display_on_website  (yes/no)
+            'no',                                 // featured_guide  (yes/no)
+            'https://example.com/photo.jpg',      // profile_photo  (URL — paste media library URL here)
+            'active',                             // status  (active/inactive)
+            'Certified local guide. Arrive 10 min early.', // notes
         ];
+
+        return [$headers, $sample];
     }
 
     private function validateGuide(Request $request, ?Guide $guide = null): array
@@ -638,26 +895,57 @@ class GuideController extends Controller
             'id_proof_upload' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:8192',
             'license_upload' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:8192',
             'police_verification' => 'nullable|boolean',
-            'verification_status' => ['nullable', Rule::in(['approved', 'rejected'])],
+            'verification_status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
             'experience_indian_customers' => 'nullable|boolean',
             'indian_tours_completed' => 'nullable|integer|min:0',
             'indian_language_support' => 'nullable',
             'indian_special_notes' => 'nullable|string',
             'display_on_website' => 'nullable|boolean',
             'featured_guide' => 'nullable|boolean',
+            'half_day_price' => 'nullable|numeric|min:0',
+            'full_day_price' => 'nullable|numeric|min:0',
+            'extra_hour_price' => 'nullable|numeric|min:0',
         ];
 
-        $validated = $request->validate($rules);
+        $messages = [
+            'title.required'                   => 'The guide title is required.',
+            'full_name.required'               => 'The guide\'s full name is required.',
+            'status.required'                  => 'Please select a status (Active / Inactive).',
+            'status.in'                        => 'Status must be Active or Inactive.',
+            'email.email'                      => 'Please enter a valid email address.',
+            'date_of_birth.before'             => 'Date of birth must be a date before today.',
+            'available_to_date.after_or_equal' => 'Available-to date must be on or after the available-from date.',
+            'daily_start_time.date_format'     => 'Daily start time must be in HH:MM format.',
+            'daily_end_time.date_format'       => 'Daily end time must be in HH:MM format.',
+            'years_experience.integer'         => 'Years of experience must be a whole number.',
+            'max_bookings_per_day.integer'     => 'Max bookings per day must be a whole number.',
+            'profile_photo.image'              => 'Profile photo must be an image file (jpg, png, gif, etc.).',
+            'profile_photo.max'                => 'Profile photo must not exceed 4 MB.',
+            'id_proof_upload.mimes'            => 'ID proof must be a JPG, PNG or PDF file.',
+            'id_proof_upload.max'              => 'ID proof file must not exceed 8 MB.',
+            'license_upload.mimes'             => 'License must be a JPG, PNG or PDF file.',
+            'license_upload.max'               => 'License file must not exceed 8 MB.',
+        ];
+
+        $validated = $request->validate($rules, $messages);
 
         $data = array_merge($validated, [
-            'other_languages' => $this->normalizeList($request->input('other_languages')),
-            'available_days' => $this->normalizeList($request->input('available_days')),
-            'indian_language_support' => $this->normalizeList($request->input('indian_language_support')),
-            'police_verification' => $request->boolean('police_verification'),
-            'experience_indian_customers' => $request->boolean('experience_indian_customers'),
-            'display_on_website' => $request->boolean('display_on_website', true),
-            'featured_guide' => $request->boolean('featured_guide'),
+            'other_languages'            => $this->normalizeList($request->input('other_languages')),
+            'available_days'             => $this->normalizeList($request->input('available_days')),
+            'indian_language_support'    => $this->normalizeList($request->input('indian_language_support')),
+            'police_verification'        => $request->boolean('police_verification'),
+            'experience_indian_customers'=> $request->boolean('experience_indian_customers'),
+            'display_on_website'         => $request->boolean('display_on_website', true),
+            'featured_guide'             => $request->boolean('featured_guide'),
         ]);
+
+        // Safe defaults for columns that must never be NULL in the database
+        if (empty($data['verification_status'])) {
+            $data['verification_status'] = 'pending';
+        }
+        if (!isset($data['indian_tours_completed']) || $data['indian_tours_completed'] === null) {
+            $data['indian_tours_completed'] = 0;
+        }
 
         if (empty($data['language']) && !empty($data['primary_language'])) {
             $data['language'] = $data['primary_language'];
@@ -693,22 +981,27 @@ class GuideController extends Controller
         $uploads = [];
 
         if ($request->hasFile('profile_photo')) {
+            // File upload takes priority over URL
             $uploads['profile_photo'] = $request->file('profile_photo')->store('guides/photos', 'public');
-            if ($guide && $guide->profile_photo) {
+            // Delete old file only if it was a storage path (not an external URL)
+            if ($guide && $guide->profile_photo && !str_starts_with($guide->profile_photo, 'http')) {
                 Storage::disk('public')->delete($guide->profile_photo);
             }
+        } elseif ($request->filled('profile_photo_url')) {
+            // Plain URL entered in the text field
+            $uploads['profile_photo'] = trim($request->input('profile_photo_url'));
         }
 
         if ($request->hasFile('id_proof_upload')) {
             $uploads['id_proof_path'] = $request->file('id_proof_upload')->store('guides/documents', 'public');
-            if ($guide && $guide->id_proof_path) {
+            if ($guide && $guide->id_proof_path && !str_starts_with($guide->id_proof_path, 'http')) {
                 Storage::disk('public')->delete($guide->id_proof_path);
             }
         }
 
         if ($request->hasFile('license_upload')) {
             $uploads['license_path'] = $request->file('license_upload')->store('guides/documents', 'public');
-            if ($guide && $guide->license_path) {
+            if ($guide && $guide->license_path && !str_starts_with($guide->license_path, 'http')) {
                 Storage::disk('public')->delete($guide->license_path);
             }
         }
@@ -764,7 +1057,7 @@ class GuideController extends Controller
             'end_time' => $pkg['end_time'] ?? null,
             'notes' => $pkg['notes'] ?? null,
             'status' => ($pkg['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active',
-            'currency' => $pkg['currency'] ?? 'INR',
+            'currency' => $pkg['currency'] ?? 'EUR',
         ];
     }
 }

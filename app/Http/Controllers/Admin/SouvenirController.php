@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ImportsSpreadsheet;
 use App\Http\Controllers\Controller;
 use App\Models\Souvenir;
 use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use ZipArchive;
 
 class SouvenirController extends Controller
 {
+    use ImportsSpreadsheet;
+
     private array $importableColumns = [
         'name',
         'description',
@@ -22,6 +24,7 @@ class SouvenirController extends Controller
         'longitude',
         'stock',
         'country',
+        'image_urls',
         'status',
     ];
 
@@ -235,17 +238,18 @@ class SouvenirController extends Controller
             $payload = $this->sanitizeImportPayload($assoc);
             $minPurchase = (int) config('souvenir.min_purchase_quantity', 10);
             $validator = Validator::make($payload, [
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'currency' => ['nullable', 'string', 'regex:/^[A-Za-z]{3}$/'],
+                'name'              => 'required|string|max:255',
+                'description'       => 'nullable|string',
+                'price'             => 'required|numeric|min:0',
+                'currency'          => ['nullable', 'string', 'regex:/^[A-Za-z]{3}$/'],
                 'min_order_quantity' => 'nullable|integer|min:' . $minPurchase,
-                'city' => 'nullable|string|max:100',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
-                'stock' => 'nullable|integer|min:0',
-                'country' => 'nullable|string|max:100',
-                'status' => 'required|in:active,inactive,pending',
+                'city'              => 'nullable|string|max:100',
+                'latitude'          => 'nullable|numeric|between:-90,90',
+                'longitude'         => 'nullable|numeric|between:-180,180',
+                'stock'             => 'nullable|integer|min:0',
+                'country'           => 'nullable|string|max:100',
+                'image_urls'        => 'nullable|string',
+                'status'            => 'required|in:active,inactive,pending',
             ]);
 
             if ($validator->fails()) {
@@ -259,6 +263,16 @@ class SouvenirController extends Controller
             }
             $payload = $this->normalizeSouvenirCurrency($payload);
             $payload['min_order_quantity'] = $payload['min_order_quantity'] ?? $minPurchase;
+
+            // Parse comma-separated image URLs into the images JSON array
+            $rawImageUrls = $payload['image_urls'] ?? null;
+            unset($payload['image_urls']);
+            if (!empty($rawImageUrls)) {
+                $urls = array_values(array_filter(array_map('trim', explode(',', $rawImageUrls))));
+                if (!empty($urls)) {
+                    $payload['images'] = $urls;
+                }
+            }
 
             $match = ['name' => $payload['name']];
             if (!empty($payload['country'])) {
@@ -275,10 +289,9 @@ class SouvenirController extends Controller
             }
         }
 
-        $message = "Import completed. Created: {$created}, Updated: {$updated}, Skipped: {$skipped}, Unchanged: {$unchanged}.";
         $flash = ($created > 0 || $updated > 0)
-            ? ['success' => 'Souvenir data imported successfully. ' . $message]
-            : ['error' => 'No new data imported. ' . $message];
+            ? ['success' => 'Souvenir data imported successfully.']
+            : ['error' => 'No new data was imported. Please check the file and try again.'];
 
         return back()->with($flash)->with('import_errors', $errors);
     }
@@ -321,8 +334,20 @@ class SouvenirController extends Controller
         $format = $this->normalizeFormat($request->get('format'));
         $rows = [
             $this->importableColumns,
-            // name, description, price, currency, min_order_quantity, city, latitude, longitude, stock, country, status
-            ['Swiss Chocolate Box', 'Premium chocolate assortment', '24.99', 'CHF', 2, 'Zurich', 47.3769, 8.5417, 50, 'Switzerland', 'active'],
+            [
+                'Swiss Chocolate Box',                                // name
+                'Premium milk chocolate assortment from Zurich.',    // description
+                24.99,                                                // price
+                'EUR',                                                // currency (EUR/CHF/USD/GBP/INR)
+                10,                                                   // min_order_quantity
+                'Zurich',                                             // city
+                47.3769,                                              // latitude
+                8.5417,                                               // longitude
+                100,                                                  // stock
+                'Switzerland',                                        // country
+                'https://example.com/chocolate.jpg',                  // image_urls (comma-separated URLs for multiple images)
+                'active',                                             // status (active/inactive/pending)
+            ],
         ];
         $filename = 'souvenir-import-sample' . ($format === 'csv' ? '.csv' : '.xls');
         if ($format === 'csv') {
@@ -339,135 +364,13 @@ class SouvenirController extends Controller
         }, $filename, ['Content-Type' => 'application/vnd.ms-excel']);
     }
 
-    private function parseUploadRows($file): array
-    {
-        $extension = strtolower($file->getClientOriginalExtension());
-        if (in_array($extension, ['csv', 'txt'])) {
-            return $this->parseCsv($file->getRealPath());
-        }
-        $xlsxRows = $this->parseXlsx($file->getRealPath());
-        return !empty($xlsxRows) ? $xlsxRows : $this->parseHtmlTable($file->getRealPath());
-    }
-
-    private function parseCsv(string $path): array
-    {
-        $rows = [];
-        if (($handle = fopen($path, 'r')) !== false) {
-            while (($data = fgetcsv($handle, 0, ',')) !== false) {
-                if (!empty($data)) {
-                    $data[0] = preg_replace('/^\xEF\xBB\xBF/', '', $data[0]);
-                }
-                $rows[] = $data;
-            }
-            fclose($handle);
-        }
-        return $rows;
-    }
-
-    private function parseXlsx(string $path): array
-    {
-        $zip = new ZipArchive();
-        $rows = [];
-        if ($zip->open($path) !== true) {
-            return [];
-        }
-        $sharedStrings = [];
-        if (($shared = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
-            libxml_use_internal_errors(true);
-            $xml = simplexml_load_string($shared);
-            libxml_clear_errors();
-            if ($xml && isset($xml->si)) {
-                foreach ($xml->si as $si) {
-                    $text = isset($si->t) ? (string) $si->t : '';
-                    if ($text === '' && isset($si->r)) {
-                        foreach ($si->r as $run) {
-                            $text .= (string) $run->t;
-                        }
-                    }
-                    $sharedStrings[] = $text;
-                }
-            }
-        }
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        if ($sheetXml === false) {
-            $zip->close();
-            return [];
-        }
-        libxml_use_internal_errors(true);
-        $sheet = simplexml_load_string($sheetXml);
-        libxml_clear_errors();
-        $zip->close();
-        if (!$sheet || !isset($sheet->sheetData->row)) {
-            return [];
-        }
-        foreach ($sheet->sheetData->row as $row) {
-            $cells = [];
-            foreach ($row->c as $c) {
-                $value = (string) $c->v;
-                if (isset($c['t']) && (string) $c['t'] === 's') {
-                    $value = $sharedStrings[(int) $value] ?? '';
-                }
-                $cells[] = trim($value);
-            }
-            $rows[] = $cells;
-        }
-        return $rows;
-    }
-
-    private function parseHtmlTable(string $path): array
-    {
-        $content = file_get_contents($path);
-        if (empty($content)) {
-            return [];
-        }
-        libxml_use_internal_errors(true);
-        $dom = new \DOMDocument();
-        $dom->loadHTML($content);
-        libxml_clear_errors();
-        $rows = [];
-        foreach ($dom->getElementsByTagName('tr') as $tr) {
-            $row = [];
-            foreach ($tr->getElementsByTagName('td') as $td) {
-                $row[] = trim($td->textContent);
-            }
-            if (!empty($row)) {
-                $rows[] = $row;
-            }
-        }
-        return $rows;
-    }
-
-    private function normalizeHeaders(array $headers): array
-    {
-        return array_map(function ($header) {
-            $n = strtolower(trim($header));
-            $n = preg_replace('/[^\p{L}\p{N}\s_-]/u', '', $n);
-            $n = str_replace([' ', '-'], '_', $n);
-            return preg_replace('/_+/', '_', $n);
-        }, $headers);
-    }
-
-    private function mapRowToAssoc(array $headers, array $row): array
-    {
-        $assoc = [];
-        foreach ($headers as $index => $header) {
-            $assoc[$header] = $row[$index] ?? null;
-        }
-        return $assoc;
-    }
-
-    private function rowIsEmpty(array $row): bool
-    {
-        foreach ($row as $value) {
-            if ($value !== null && trim((string) $value) !== '') {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private function sanitizeImportPayload(array $row): array
     {
+        // Accept common image column aliases
+        if (empty($row['image_urls'])) {
+            $row['image_urls'] = $row['images'] ?? $row['image_url'] ?? $row['photo_url'] ?? null;
+        }
+
         $payload = [];
         foreach ($this->importableColumns as $column) {
             $value = $row[$column] ?? null;
@@ -482,26 +385,24 @@ class SouvenirController extends Controller
             return null;
         }
         $value = is_string($value) ? trim($value) : $value;
+
         if ($column === 'status') {
             $v = strtolower((string) $value);
             return in_array($v, ['active', 'inactive', 'pending'], true) ? $v : 'pending';
         }
         if ($column === 'min_order_quantity') {
             $minPurchase = (int) config('souvenir.min_purchase_quantity', 10);
-
             return is_numeric($value) ? max($minPurchase, (int) $value) : $minPurchase;
         }
-        if ($column === 'price') {
-            return is_numeric($value) ? (float) $value : null;
-        }
-        if ($column === 'latitude') {
-            return is_numeric($value) ? (float) $value : null;
-        }
-        if ($column === 'longitude') {
+        if (in_array($column, ['price', 'latitude', 'longitude'], true)) {
             return is_numeric($value) ? (float) $value : null;
         }
         if ($column === 'stock') {
             return is_numeric($value) ? max(0, (int) $value) : 0;
+        }
+        // image_urls: keep as raw comma-separated string; parsed in import loop
+        if ($column === 'image_urls') {
+            return (string) $value ?: null;
         }
         return $value;
     }
@@ -534,38 +435,29 @@ class SouvenirController extends Controller
     {
         $rows = [$this->importableColumns];
         foreach ($souvenirs as $s) {
+            $imageUrls = '';
+            if (!empty($s->images)) {
+                $imageUrls = implode(',', array_map(
+                    fn($path) => ImageService::getUrl($path),
+                    (array) $s->images
+                ));
+            }
             $rows[] = [
                 $s->name,
                 $s->description,
                 $s->price,
-                $s->currency,
+                $s->currency ?? 'EUR',
                 $s->min_order_quantity,
                 $s->city,
                 $s->latitude,
                 $s->longitude,
                 $s->stock,
                 $s->country,
+                $imageUrls,
                 $s->status,
             ];
         }
         return $rows;
     }
 
-    private function generateHtmlExcel(array $rows): string
-    {
-        $html = '<table border="1"><thead><tr>';
-        foreach ($rows[0] as $heading) {
-            $html .= '<th>' . htmlspecialchars((string) $heading) . '</th>';
-        }
-        $html .= '</tr></thead><tbody>';
-        foreach (array_slice($rows, 1) as $row) {
-            $html .= '<tr>';
-            foreach ($row as $cell) {
-                $html .= '<td>' . htmlspecialchars((string) $cell) . '</td>';
-            }
-            $html .= '</tr>';
-        }
-        $html .= '</tbody></table>';
-        return $html;
-    }
 }

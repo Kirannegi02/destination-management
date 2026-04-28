@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\MealController as ApiMealController;
+use App\Models\Meal;
 use App\Models\Restaurant;
 use App\Services\ImageService;
+use App\Support\Currency;
 use Illuminate\Http\Request;
 
 class RestaurantController extends Controller
@@ -165,11 +168,20 @@ class RestaurantController extends Controller
 
             // Pagination
             $perPage = min($request->get('per_page', 15), 100); // Max 100 per page
+
+            // Optionally eager-load active meals (pass include_meals=true)
+            $includeMeals = filter_var($request->get('include_meals', false), FILTER_VALIDATE_BOOLEAN);
+            if ($includeMeals) {
+                $query->with(['meals' => function ($q) {
+                    $q->where('status', 'active')->orderBy('display_order')->orderBy('meal_type');
+                }]);
+            }
+
             $restaurants = $query->paginate($perPage);
 
             // Transform restaurant data to include image URLs
-            $restaurants->getCollection()->transform(function ($restaurant) {
-                return $this->transformRestaurant($restaurant);
+            $restaurants->getCollection()->transform(function ($restaurant) use ($includeMeals) {
+                return $this->transformRestaurant($restaurant, $includeMeals);
             });
 
             // Always return 200 with empty array if no restaurants found
@@ -241,10 +253,11 @@ class RestaurantController extends Controller
                 ], 400);
             }
 
-            $restaurant = Restaurant::where('id', $id)->first();
+            $restaurant = Restaurant::with(['meals' => function ($q) {
+                $q->where('status', 'active')->orderBy('display_order')->orderBy('meal_type');
+            }])->where('id', $id)->first();
 
             if (!$restaurant) {
-                // Return 200 with null data instead of 404
                 return response()->json([
                     'success' => true,
                     'message' => 'No restaurant found',
@@ -252,9 +265,7 @@ class RestaurantController extends Controller
                 ], 200);
             }
 
-            // Only return active restaurants unless explicitly requested
             if ($restaurant->status !== 'active') {
-                // Return 200 with null data instead of 404
                 return response()->json([
                     'success' => true,
                     'message' => 'Restaurant is not available',
@@ -265,7 +276,7 @@ class RestaurantController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Restaurant retrieved successfully',
-                'data' => $this->transformRestaurant($restaurant)
+                'data' => $this->transformRestaurant($restaurant, true)
             ], 200);
 
         } catch (\Exception $e) {
@@ -278,14 +289,13 @@ class RestaurantController extends Controller
     }
 
     /**
-     * Transform restaurant data for API response
-     * 
-     * @param Restaurant $restaurant
-     * @return array
+     * Transform restaurant data for API response.
+     *
+     * @param  Restaurant  $restaurant
+     * @param  bool        $includeMeals  Whether to embed the restaurant's active meals
      */
-    private function transformRestaurant($restaurant)
+    private function transformRestaurant(Restaurant $restaurant, bool $includeMeals = false): array
     {
-        // Transform images to full URLs
         $images = [];
         if ($restaurant->images && is_array($restaurant->images)) {
             foreach ($restaurant->images as $imagePath) {
@@ -293,44 +303,55 @@ class RestaurantController extends Controller
             }
         }
 
-        return [
-            'id' => $restaurant->id,
-            'restaurant_name' => $restaurant->restaurant_name,
-            'description' => $restaurant->description,
-            'address' => $restaurant->address,
-            'city' => $restaurant->city,
-            'state' => $restaurant->state,
-            'country' => $restaurant->country,
-            'pincode' => $restaurant->pincode,
-            'phone' => $restaurant->phone,
-            'email' => $restaurant->email,
-            'alternate_phone' => $restaurant->alternate_phone,
-            'website' => $restaurant->website,
-            'images' => $images,
-            'video' => $restaurant->video_url,
-            'star_rating' => $restaurant->star_rating,
-            'price' => $restaurant->price ? (float) $restaurant->price : null,
-            'price_formatted' => $restaurant->price_formatted,
+        $data = [
+            'id'                   => $restaurant->id,
+            'restaurant_name'      => $restaurant->restaurant_name,
+            'description'          => $restaurant->description,
+            'address'              => $restaurant->address,
+            'city'                 => $restaurant->city,
+            'state'                => $restaurant->state,
+            'country'              => $restaurant->country,
+            'pincode'              => $restaurant->pincode,
+            'phone'                => $restaurant->phone,
+            'email'                => $restaurant->email,
+            'alternate_phone'      => $restaurant->alternate_phone,
+            'website'              => $restaurant->website,
+            'images'               => $images,
+            'video'                => $restaurant->video_url,
+            'star_rating'          => $restaurant->star_rating,
+            'price'                => $restaurant->price ? (float) $restaurant->price : null,
+            'price_formatted'      => $restaurant->price_formatted,
             // Legacy keys for backward compatibility
-            'price_range' => $restaurant->price ? (float) $restaurant->price : null,
-            'price_range_label' => $restaurant->price_range_label,
-            'cuisine_type' => $restaurant->cuisine_type,
-            'seating_capacity' => $restaurant->seating_capacity,
-            'opening_hours' => $restaurant->opening_hours,
-            'amenities' => $restaurant->amenities,
-            'tax_number' => $restaurant->tax_number,
-            'license_number' => $restaurant->license_number,
-            'parking_available' => (bool) $restaurant->parking_available,
-            'wifi_available' => (bool) $restaurant->wifi_available,
+            'price_range'          => $restaurant->price ? (float) $restaurant->price : null,
+            'price_range_label'    => $restaurant->price_range_label,
+            'cuisine_type'         => $restaurant->cuisine_type,
+            'seating_capacity'     => $restaurant->seating_capacity,
+            'opening_hours'        => $restaurant->opening_hours,
+            'amenities'            => $restaurant->amenities,
+            'tax_number'           => $restaurant->tax_number,
+            'license_number'       => $restaurant->license_number,
+            'parking_available'    => (bool) $restaurant->parking_available,
+            'wifi_available'       => (bool) $restaurant->wifi_available,
             'accepts_reservations' => (bool) $restaurant->accepts_reservations,
-            'payment_methods' => $restaurant->payment_methods,
-            'social_media_links' => $restaurant->social_media_links,
-            'latitude' => $restaurant->latitude ? (float) $restaurant->latitude : null,
-            'longitude' => $restaurant->longitude ? (float) $restaurant->longitude : null,
-            'status' => $restaurant->status,
-            'created_at' => $restaurant->created_at ? $restaurant->created_at->toISOString() : null,
-            'updated_at' => $restaurant->updated_at ? $restaurant->updated_at->toISOString() : null,
+            'payment_methods'      => $restaurant->payment_methods,
+            'social_media_links'   => $restaurant->social_media_links,
+            'latitude'             => $restaurant->latitude ? (float) $restaurant->latitude : null,
+            'longitude'            => $restaurant->longitude ? (float) $restaurant->longitude : null,
+            'status'               => $restaurant->status,
+            'created_at'           => $restaurant->created_at?->toISOString(),
+            'updated_at'           => $restaurant->updated_at?->toISOString(),
         ];
+
+        if ($includeMeals) {
+            $meals = $restaurant->relationLoaded('meals')
+                ? $restaurant->meals
+                : $restaurant->meals()->where('status', 'active')
+                    ->orderBy('display_order')->orderBy('meal_type')->get();
+
+            $data['meals'] = $meals->map(fn (Meal $m) => ApiMealController::transformMeal($m))->values();
+        }
+
+        return $data;
     }
 
     /**

@@ -61,7 +61,7 @@
                     @enderror
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
                             Star Rating
@@ -76,22 +76,6 @@
                             @endfor
                         </select>
                         @error('star_rating')
-                            <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                            Price
-                        </label>
-                        <input type="number" 
-                               name="price" 
-                               value="{{ old('price', $restaurant->price) }}"
-                               step="0.01"
-                               min="0"
-                               placeholder="Enter average price"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                        @error('price')
                             <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
                         @enderror
                     </div>
@@ -310,6 +294,74 @@
                         @enderror
                     </div>
                 </div>
+            </div>
+
+            <!-- Global menu prices (per restaurant; same fields as bulk import) -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 20px;">Global menu prices (this restaurant)</h3>
+                <p style="color: #4a5568; font-size: 14px; margin: -8px 0 20px 0;">
+                    Buffet description and supplement availability are managed under
+                    <a href="{{ route('admin.meal-templates.index') }}" style="color: #667eea;">Global menu</a>.
+                    Set this outlet’s EUR prices below (optional fields you leave blank are not changed).
+                </p>
+                @php
+                    $globalTypes = \App\Services\GlobalMealSyncService::sharedTemplateMealTypes();
+                    $mealLabels = \App\Models\Meal::getMealTypes();
+                @endphp
+                @foreach($globalTypes as $typeKey)
+                    @php
+                        $defaults = $globalMealFormData[$typeKey] ?? ['price' => '', 'supplement_starter' => '', 'supplement_main_course' => ''];
+                    @endphp
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: #fafbff;">
+                        <h4 style="margin: 0 0 12px 0; color: #2d3748; font-size: 16px;">
+                            {{ $mealLabels[$typeKey] ?? $typeKey }}
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3748; font-size: 13px;">
+                                    Main buffet price (EUR)
+                                </label>
+                                <input type="number"
+                                       name="global_meals[{{ $typeKey }}][price]"
+                                       value="{{ old('global_meals.'.$typeKey.'.price', $defaults['price']) }}"
+                                       step="0.01" min="0"
+                                       placeholder="Leave blank to keep current"
+                                       style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                                @error('global_meals.'.$typeKey.'.price')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3748; font-size: 13px;">
+                                    Starter supplement (EUR)
+                                </label>
+                                <input type="number"
+                                       name="global_meals[{{ $typeKey }}][supplement_starter]"
+                                       value="{{ old('global_meals.'.$typeKey.'.supplement_starter', $defaults['supplement_starter']) }}"
+                                       step="0.01" min="0"
+                                       placeholder="Leave blank to keep current"
+                                       style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                                @error('global_meals.'.$typeKey.'.supplement_starter')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #2d3748; font-size: 13px;">
+                                    Main course supplement (EUR)
+                                </label>
+                                <input type="number"
+                                       name="global_meals[{{ $typeKey }}][supplement_main_course]"
+                                       value="{{ old('global_meals.'.$typeKey.'.supplement_main_course', $defaults['supplement_main_course']) }}"
+                                       step="0.01" min="0"
+                                       placeholder="Leave blank to keep current"
+                                       style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                                @error('global_meals.'.$typeKey.'.supplement_main_course')
+                                    <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
             </div>
 
             <!-- Images Section -->

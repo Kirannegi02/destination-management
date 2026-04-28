@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ImportsSpreadsheet;
 use App\Http\Controllers\Controller;
 use App\Models\Sightseeing;
 use App\Services\ImageService;
@@ -9,10 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use ZipArchive;
 
 class SightseeingController extends Controller
 {
+    use ImportsSpreadsheet;
     /**
      * Columns used for import/export.
      */
@@ -23,7 +24,19 @@ class SightseeingController extends Controller
         'city',
         'start_location',
         'end_location',
+        'standard_price',
+        'currency',
+        'default_pax',
+        'standard_price_note',
+        'availability_notes',
+        'booking_conditions',
+        'detail_page_note',
+        'requires_date',
+        'requires_pax',
         'is_featured',
+        'display_order',
+        'image',
+        'options',
         'status',
     ];
 
@@ -216,14 +229,26 @@ class SightseeingController extends Controller
             $payload = $this->sanitizeImportPayload($assoc);
 
             $validator = Validator::make($payload, [
-                'title' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'country' => 'nullable|string|max:100',
-                'city' => 'nullable|string|max:100',
-                'start_location' => 'nullable|string|max:255',
-                'end_location' => 'nullable|string|max:255',
-                'is_featured' => 'nullable|boolean',
-                'status' => 'required|in:active,inactive,pending',
+                'title'               => 'required|string|max:255',
+                'description'         => 'nullable|string',
+                'country'             => 'nullable|string|max:100',
+                'city'                => 'nullable|string|max:100',
+                'start_location'      => 'nullable|string|max:255',
+                'end_location'        => 'nullable|string|max:255',
+                'standard_price'      => 'nullable|numeric|min:0',
+                'currency'            => 'nullable|string|max:8',
+                'default_pax'         => 'nullable|integer|min:1',
+                'standard_price_note' => 'nullable|string|max:255',
+                'availability_notes'  => 'nullable|string',
+                'booking_conditions'  => 'nullable|string',
+                'detail_page_note'    => 'nullable|string',
+                'requires_date'       => 'nullable|boolean',
+                'requires_pax'        => 'nullable|boolean',
+                'is_featured'         => 'nullable|boolean',
+                'display_order'       => 'nullable|integer',
+                'image'               => 'nullable|string|max:1000',
+                'options'             => 'nullable|string',
+                'status'              => 'required|in:active,inactive,pending',
             ]);
 
             if ($validator->fails()) {
@@ -236,16 +261,31 @@ class SightseeingController extends Controller
                 $payload['status'] = 'pending';
             }
 
+            // Extract options JSON before saving — it's a relation, not a column
+            $optionsJson = $payload['options'] ?? null;
+            unset($payload['options']);
+
             $match = array_filter([
-                'title' => $payload['title'] ?? null,
-                'city' => $payload['city'] ?? null,
-                'country' => $payload['country'] ?? null,
+                'title'   => $payload['title']   ?? null,
+                'city'    => $payload['city']     ?? null,
+                'country' => $payload['country']  ?? null,
             ]);
 
             $sightseeing = Sightseeing::updateOrCreate(
                 !empty($match) ? $match : ['title' => $payload['title']],
                 $payload
             );
+
+            // Sync options if provided in the sheet
+            if (!empty($optionsJson)) {
+                $parsedOptions = $this->parseImportOptions($optionsJson);
+                if (!empty($parsedOptions)) {
+                    $sightseeing->options()->delete();
+                    foreach ($parsedOptions as $optionData) {
+                        $sightseeing->options()->create($optionData);
+                    }
+                }
+            }
 
             if ($sightseeing->wasRecentlyCreated) {
                 $created++;
@@ -256,11 +296,9 @@ class SightseeingController extends Controller
             }
         }
 
-        $message = "Import completed. Created: {$created}, Updated: {$updated}, Skipped: {$skipped}, Unchanged: {$unchanged}.";
-
         $flash = $created > 0 || $updated > 0
-            ? ['success' => 'Sightseeing data imported successfully. ' . $message]
-            : ['error' => 'No new data imported. ' . $message];
+            ? ['success' => 'Sightseeing data imported successfully.']
+            : ['error' => 'No new data was imported. Please check the file and try again.'];
 
         return back()
             ->with($flash)
@@ -408,171 +446,74 @@ class SightseeingController extends Controller
         return null;
     }
 
-    private function parseUploadRows($file): array
-    {
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        if (in_array($extension, ['csv', 'txt'])) {
-            return $this->parseCsv($file->getRealPath());
-        }
-
-        $xlsxRows = $this->parseXlsx($file->getRealPath());
-        if (!empty($xlsxRows)) {
-            return $xlsxRows;
-        }
-
-        return $this->parseHtmlTable($file->getRealPath());
-    }
-
-    private function parseCsv(string $path): array
-    {
-        $rows = [];
-        if (($handle = fopen($path, 'r')) !== false) {
-            while (($data = fgetcsv($handle, 0, ',')) !== false) {
-                if (!empty($data)) {
-                    $data[0] = preg_replace('/^\xEF\xBB\xBF/', '', $data[0]);
-                }
-                $rows[] = $data;
-            }
-            fclose($handle);
-        }
-        return $rows;
-    }
-
-    private function parseXlsx(string $path): array
-    {
-        $zip = new ZipArchive();
-        $rows = [];
-
-        if ($zip->open($path) !== true) {
-            return [];
-        }
-
-        $sharedStrings = [];
-        if (($shared = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
-            libxml_use_internal_errors(true);
-            $xml = simplexml_load_string($shared);
-            libxml_clear_errors();
-            if ($xml && isset($xml->si)) {
-                foreach ($xml->si as $si) {
-                    $text = '';
-                    if (isset($si->t)) {
-                        $text = (string) $si->t;
-                    } elseif (isset($si->r)) {
-                        foreach ($si->r as $run) {
-                            $text .= (string) $run->t;
-                        }
-                    }
-                    $sharedStrings[] = $text;
-                }
-            }
-        }
-
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        if ($sheetXml === false) {
-            $zip->close();
-            return [];
-        }
-
-        libxml_use_internal_errors(true);
-        $sheet = simplexml_load_string($sheetXml);
-        libxml_clear_errors();
-        $zip->close();
-
-        if (!$sheet || !isset($sheet->sheetData->row)) {
-            return [];
-        }
-
-        foreach ($sheet->sheetData->row as $row) {
-            $cells = [];
-            foreach ($row->c as $c) {
-                $value = (string) $c->v;
-                if (isset($c['t']) && (string) $c['t'] === 's') {
-                    $index = (int) $value;
-                    $value = $sharedStrings[$index] ?? '';
-                }
-                $cells[] = trim($value);
-            }
-            $rows[] = $cells;
-        }
-
-        return $rows;
-    }
-
-    private function parseHtmlTable(string $path): array
-    {
-        $content = file_get_contents($path);
-        if (empty($content)) {
-            return [];
-        }
-
-        libxml_use_internal_errors(true);
-        $dom = new \DOMDocument();
-        $loaded = $dom->loadHTML($content);
-        libxml_clear_errors();
-        if (!$loaded) {
-            return [];
-        }
-
-        $rows = [];
-        foreach ($dom->getElementsByTagName('tr') as $tr) {
-            if (!$tr instanceof \DOMElement) {
-                continue;
-            }
-            $row = [];
-            foreach ($tr->getElementsByTagName('td') as $td) {
-                if (!$td instanceof \DOMElement) {
-                    continue;
-                }
-                $row[] = trim($td->textContent);
-            }
-            if (!empty($row)) {
-                $rows[] = $row;
-            }
-        }
-
-        return $rows;
-    }
-
-    private function normalizeHeaders(array $headers): array
-    {
-        return array_map(function ($header) {
-            $normalized = strtolower(trim($header));
-            $normalized = preg_replace('/[^\p{L}\p{N}\s_-]/u', '', $normalized);
-            $normalized = str_replace([' ', '-'], '_', $normalized);
-            $normalized = preg_replace('/_+/', '_', $normalized);
-            return $normalized;
-        }, $headers);
-    }
-
-    private function mapRowToAssoc(array $headers, array $row): array
-    {
-        $assoc = [];
-        foreach ($headers as $index => $header) {
-            $assoc[$header] = $row[$index] ?? null;
-        }
-        return $assoc;
-    }
-
-    private function rowIsEmpty(array $row): bool
-    {
-        foreach ($row as $value) {
-            if (!is_null($value) && trim((string) $value) !== '') {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private function sanitizeImportPayload(array $row): array
     {
+        // Accept common image column aliases
+        if (empty($row['image'])) {
+            $row['image'] = $row['image_url'] ?? $row['photo'] ?? $row['photo_url'] ?? null;
+        }
+
         $payload = [];
         foreach ($this->importableColumns as $column) {
             $value = $row[$column] ?? null;
             $payload[$column] = $this->normalizeValue($column, $value);
         }
 
+        // Defaults
+        if (empty($payload['status'])) {
+            $payload['status'] = 'pending';
+        }
+        if (empty($payload['currency'])) {
+            $payload['currency'] = 'EUR';
+        }
+        if (!isset($payload['requires_date'])) {
+            $payload['requires_date'] = true;
+        }
+        if (!isset($payload['requires_pax'])) {
+            $payload['requires_pax'] = true;
+        }
+        if (!isset($payload['is_featured'])) {
+            $payload['is_featured'] = false;
+        }
+
         return $payload;
+    }
+
+    /**
+     * Parse an options JSON string from the import sheet into structured option payloads.
+     * Accepts the compact format: [{"name":"...","price":120,"lunch":"yes",...}, ...]
+     */
+    private function parseImportOptions(string $optionsJson): array
+    {
+        $decoded = json_decode($optionsJson, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($decoded as $item) {
+            if (empty($item['name'])) {
+                continue;
+            }
+            $tags = null;
+            if (!empty($item['tags'])) {
+                $tags = array_values(array_filter(array_map('trim', explode(',', (string) $item['tags']))));
+            }
+            $result[] = [
+                'name'               => (string) $item['name'],
+                'description'        => $item['description'] ?? null,
+                'duration_minutes'   => isset($item['duration']) ? (int) $item['duration'] : null,
+                'base_price'         => isset($item['price']) ? (float) $item['price'] : null,
+                'currency'           => $item['currency'] ?? 'EUR',
+                'includes_lunch'     => $this->normalizeBoolean($item['lunch']     ?? 'no'),
+                'includes_transport' => $this->normalizeBoolean($item['transport'] ?? 'no'),
+                'availability_note'  => $item['note'] ?? null,
+                'tags'               => $tags,
+                'is_active'          => $this->normalizeBoolean($item['active']    ?? 'yes'),
+            ];
+        }
+
+        return $result;
     }
 
     private function normalizeValue(string $column, $value)
@@ -586,8 +527,32 @@ class SightseeingController extends Controller
             return null;
         }
 
-        if (in_array($column, ['is_featured'], true)) {
+        // Boolean fields
+        if (in_array($column, ['is_featured', 'requires_date', 'requires_pax'], true)) {
             return $this->normalizeBoolean($value);
+        }
+
+        // Numeric fields
+        if (in_array($column, ['standard_price'], true)) {
+            return is_numeric($value) ? (float) $value : null;
+        }
+        if (in_array($column, ['default_pax', 'display_order'], true)) {
+            return is_numeric($value) ? (int) $value : null;
+        }
+
+        // Options: keep raw JSON string; parsed later during import sync
+        if ($column === 'options') {
+            return (string) $value ?: null;
+        }
+
+        // Image: accept any URL or storage path as-is
+        if ($column === 'image') {
+            $str = (string) $value;
+            // If it looks like a URL, store it directly
+            if (preg_match('/^https?:\/\//i', $str)) {
+                return $str;
+            }
+            return $str ?: null;
         }
 
         if ($column === 'status') {
@@ -616,6 +581,26 @@ class SightseeingController extends Controller
         $rows[] = $this->importableColumns;
 
         foreach ($sightseeings as $sightseeing) {
+            $sightseeing->loadMissing('options');
+            $optionsJson = '';
+            if ($sightseeing->options->isNotEmpty()) {
+                $optionsJson = json_encode(
+                    $sightseeing->options->map(fn($o) => array_filter([
+                        'name'      => $o->name,
+                        'price'     => $o->base_price,
+                        'currency'  => $o->currency,
+                        'duration'  => $o->duration_minutes,
+                        'lunch'     => $o->includes_lunch     ? 'yes' : 'no',
+                        'transport' => $o->includes_transport ? 'yes' : 'no',
+                        'note'      => $o->availability_note,
+                        'tags'      => is_array($o->tags) ? implode(',', $o->tags) : $o->tags,
+                        'active'    => ($o->is_active ?? true) ? 'yes' : 'no',
+                        'description' => $o->description,
+                    ], fn($v) => $v !== null && $v !== ''))->values()->all(),
+                    JSON_UNESCAPED_UNICODE
+                );
+            }
+
             $rows[] = [
                 $sightseeing->title,
                 $sightseeing->description,
@@ -623,7 +608,19 @@ class SightseeingController extends Controller
                 $sightseeing->city,
                 $sightseeing->start_location,
                 $sightseeing->end_location,
-                $sightseeing->is_featured ? 'Yes' : 'No',
+                $sightseeing->standard_price,
+                $sightseeing->currency ?? 'EUR',
+                $sightseeing->default_pax,
+                $sightseeing->standard_price_note,
+                $sightseeing->availability_notes,
+                $sightseeing->booking_conditions,
+                $sightseeing->detail_page_note,
+                $sightseeing->requires_date ? 'yes' : 'no',
+                $sightseeing->requires_pax  ? 'yes' : 'no',
+                $sightseeing->is_featured   ? 'yes' : 'no',
+                $sightseeing->display_order,
+                \App\Services\ImageService::getUrl($sightseeing->image),
+                $optionsJson,
                 $sightseeing->status,
             ];
         }
@@ -631,39 +628,67 @@ class SightseeingController extends Controller
         return $rows;
     }
 
-    private function generateHtmlExcel(array $rows): string
-    {
-        $html = '<table border="1"><thead><tr>';
-        foreach ($rows[0] as $heading) {
-            $html .= '<th>' . htmlspecialchars((string) $heading) . '</th>';
-        }
-        $html .= '</tr></thead><tbody>';
-
-        foreach (array_slice($rows, 1) as $row) {
-            $html .= '<tr>';
-            foreach ($row as $cell) {
-                $html .= '<td>' . htmlspecialchars((string) $cell) . '</td>';
-            }
-            $html .= '</tr>';
-        }
-
-        $html .= '</tbody></table>';
-        return $html;
-    }
-
     private function sampleRows(): array
     {
+        $sampleOptions = json_encode([
+            [
+                'name'        => 'Mt. Titlis Basic',
+                'price'       => 120,
+                'currency'    => 'EUR',
+                'duration'    => 480,
+                'lunch'       => 'no',
+                'transport'   => 'no',
+                'tags'        => 'mountain,snow,cable-car',
+                'active'      => 'yes',
+                'description' => 'Cable car ride to the summit without add-ons.',
+            ],
+            [
+                'name'        => 'Mt. Titlis with Ice Flyer',
+                'price'       => 150,
+                'currency'    => 'EUR',
+                'duration'    => 540,
+                'lunch'       => 'no',
+                'transport'   => 'no',
+                'tags'        => 'mountain,snow,ice-flyer',
+                'active'      => 'yes',
+                'description' => 'Includes the thrilling Ice Flyer chair lift.',
+            ],
+            [
+                'name'        => 'Mt. Titlis with Indian Lunch',
+                'price'       => 175,
+                'currency'    => 'EUR',
+                'duration'    => 600,
+                'lunch'       => 'yes',
+                'transport'   => 'no',
+                'tags'        => 'mountain,snow,lunch',
+                'active'      => 'yes',
+                'description' => 'Full experience including Indian lunch at the summit.',
+            ],
+        ], JSON_UNESCAPED_UNICODE);
+
         return [
             $this->importableColumns,
             [
-                'Mt. Titlis',
-                'Base sightseeing without add-ons',
-                'Switzerland',
-                'Engelberg',
-                'Cable car base',
-                'Summit',
-                'No',
-                'active',
+                'Mt. Titlis',                                    // title
+                'Iconic cable car ride to snowy summit.',        // description
+                'Switzerland',                                   // country
+                'Engelberg',                                     // city
+                'Cable car base station',                        // start_location
+                'Summit (3238 m)',                               // end_location
+                120.00,                                          // standard_price (EUR) — base/default price
+                'EUR',                                           // currency
+                2,                                               // default_pax
+                'Per person, min 2 pax',                        // standard_price_note
+                'Available daily, weather permitting.',          // availability_notes
+                'No refund within 24 hours of booking.',        // booking_conditions
+                'Warm clothing recommended.',                    // detail_page_note
+                'yes',                                           // requires_date  (yes/no)
+                'yes',                                           // requires_pax   (yes/no)
+                'yes',                                           // is_featured    (yes/no)
+                1,                                               // display_order
+                'https://example.com/titlis.jpg',                // image (URL — paste media library URL here)
+                $sampleOptions,                                  // options — JSON array of packages (see format above)
+                'active',                                        // status (active/inactive/pending)
             ],
         ];
     }

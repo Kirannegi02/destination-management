@@ -166,7 +166,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/sightseeing-bookings/{id}', [\App\Http\Controllers\Admin\SightseeingBookingController::class, 'show'])->name('sightseeing-bookings.show')->whereNumber('id');
         Route::post('/sightseeing-bookings/{id}/status', [\App\Http\Controllers\Admin\SightseeingBookingController::class, 'updateStatus'])->name('sightseeing-bookings.status')->whereNumber('id');
 
-        // Transport routes (location + vehicle type + price per km)
+        // Transport routes (zone + vehicle type + price per km / day)
+        Route::post('/transports/reverse-geocode', [\App\Http\Controllers\Admin\TransportController::class, 'reverseGeocode'])
+            ->name('transports.reverse-geocode');
+        Route::post('/transports/forward-geocode', [\App\Http\Controllers\Admin\TransportController::class, 'forwardGeocode'])
+            ->name('transports.forward-geocode');
+        Route::post('/transports/suggest-zone-cities', [\App\Http\Controllers\Admin\TransportController::class, 'suggestCitiesFromPolygon'])
+            ->name('transports.suggest-zone-cities');
+
         Route::prefix('transports')->name('transports.')->group(function () {
             Route::get('/export', [\App\Http\Controllers\Admin\TransportController::class, 'export'])->name('export');
             Route::get('/export/page', [\App\Http\Controllers\Admin\TransportController::class, 'exportPage'])->name('export.page');
@@ -194,7 +201,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/vehicles', [\App\Http\Controllers\Admin\VehicleController::class, 'index'])->name('vehicles.index');
         Route::get('/vehicles/{vehicle}', [\App\Http\Controllers\Admin\VehicleController::class, 'show'])->name('vehicles.show');
 
-        // Meal routes
+        // Global meal templates (shared menu for all restaurants)
+        Route::prefix('meal-templates')->name('meal-templates.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\MealTemplateController::class, 'index'])->name('index');
+            Route::get('/{mealTemplate}/edit', [\App\Http\Controllers\Admin\MealTemplateController::class, 'edit'])->name('edit');
+            Route::put('/{mealTemplate}', [\App\Http\Controllers\Admin\MealTemplateController::class, 'update'])->name('update');
+        });
+
+        // Meal routes (import/export before resource)
+        Route::prefix('meals')->name('meals.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\Admin\MealController::class, 'export'])->name('export');
+            Route::get('/export/page', [\App\Http\Controllers\Admin\MealController::class, 'exportPage'])->name('export.page');
+            Route::get('/import', [\App\Http\Controllers\Admin\MealController::class, 'importForm'])->name('import.form');
+            Route::post('/import', [\App\Http\Controllers\Admin\MealController::class, 'import'])->name('import');
+            Route::get('/import/sample', [\App\Http\Controllers\Admin\MealController::class, 'sample'])->name('import.sample');
+        });
         Route::resource('meals', \App\Http\Controllers\Admin\MealController::class);
         Route::get('/meals', [\App\Http\Controllers\Admin\MealController::class, 'index'])->name('meals.index');
 
@@ -219,6 +240,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Booking routes
         Route::resource('bookings', \App\Http\Controllers\Admin\BookingController::class)->only(['index', 'show']);
         Route::post('/bookings/{booking}/status', [\App\Http\Controllers\Admin\BookingController::class, 'updateStatus'])->name('bookings.status');
+
+        // Media library (multi-upload + copyable paths/URLs)
+        Route::get('/media-library', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'index'])->name('media-library.index');
+        Route::post('/media-library', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'store'])->name('media-library.store');
+        Route::post('/media-library/videos', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'storeVideo'])->name('media-library.store-video');
 
         // Admin profile
         Route::get('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('profile.edit');

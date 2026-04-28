@@ -2,16 +2,25 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\ImportsSpreadsheet;
 use App\Http\Controllers\Controller;
+use App\Models\Meal;
 use App\Models\Restaurant;
+use App\Services\GlobalMealSyncService;
 use App\Services\ImageService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use ZipArchive;
 
 class RestaurantController extends Controller
 {
+    use ImportsSpreadsheet;
+
     /**
      * Columns we allow for import/export.
      */
@@ -27,6 +36,8 @@ class RestaurantController extends Controller
         'email',
         'alternate_phone',
         'website',
+        'images',
+        'video',
         'star_rating',
         'price',
         'cuisine_type',
@@ -38,6 +49,51 @@ class RestaurantController extends Controller
         'tax_number',
         'license_number',
     ];
+
+    /**
+     * Optional columns: meal_price_* plus starter/main supplement (EUR) per global meal type.
+     */
+    private function globalMealImportExportTailColumns(): array
+    {
+        $cols = [];
+        foreach (GlobalMealSyncService::sharedTemplateMealTypes() as $t) {
+            $cols[] = 'meal_price_'.$t;
+            $cols[] = GlobalMealSyncService::supplementStarterColumn($t);
+            $cols[] = GlobalMealSyncService::supplementMainCourseColumn($t);
+        }
+
+        return $cols;
+    }
+
+    /**
+     * Full header row for restaurant import/export sample and export when including meal prices.
+     */
+    private function restaurantSheetColumns(): array
+    {
+        return array_merge($this->importableColumns, $this->globalMealImportExportTailColumns());
+    }
+
+    /**
+     * Global meal tail columns for import/export docs (same order as the spreadsheet tail).
+     *
+     * @return list<array{type: string, label: string, price_column: string, supplement_starter_column: string, supplement_main_course_column: string}>
+     */
+    private function globalMealSheetColumnGroups(): array
+    {
+        $labels = Meal::getMealTypes();
+        $groups = [];
+        foreach (GlobalMealSyncService::sharedTemplateMealTypes() as $type) {
+            $groups[] = [
+                'type' => $type,
+                'label' => $labels[$type] ?? $type,
+                'price_column' => 'meal_price_'.$type,
+                'supplement_starter_column' => GlobalMealSyncService::supplementStarterColumn($type),
+                'supplement_main_course_column' => GlobalMealSyncService::supplementMainCourseColumn($type),
+            ];
+        }
+
+        return $groups;
+    }
 
     /**
      * Display a listing of the restaurants.
@@ -219,9 +275,25 @@ class RestaurantController extends Controller
      */
     public function edit(string $id)
     {
-        $restaurant = Restaurant::findOrFail($id);
-        
-        return view('admin.restaurants.edit', compact('restaurant'));
+        $restaurant = Restaurant::with(['meals' => function ($q) {
+            $q->whereIn('meal_type', GlobalMealSyncService::sharedTemplateMealTypes());
+        }])->findOrFail($id);
+
+        $mealByType = $restaurant->meals->keyBy('meal_type');
+        $globalMealFormData = [];
+        foreach (GlobalMealSyncService::sharedTemplateMealTypes() as $type) {
+            $m = $mealByType->get($type);
+            $sup = $m && is_array($m->supplements) ? $m->supplements : [];
+            $st = is_array($sup['starter'] ?? null) ? $sup['starter'] : [];
+            $mc = is_array($sup['main_course'] ?? null) ? $sup['main_course'] : [];
+            $globalMealFormData[$type] = [
+                'price' => $m && $m->price !== null ? $m->price : '',
+                'supplement_starter' => isset($st['price']) && is_numeric($st['price']) ? $st['price'] : '',
+                'supplement_main_course' => isset($mc['price']) && is_numeric($mc['price']) ? $mc['price'] : '',
+            ];
+        }
+
+        return view('admin.restaurants.edit', compact('restaurant', 'globalMealFormData'));
     }
 
     /**
@@ -264,6 +336,14 @@ class RestaurantController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'status' => 'required|in:active,inactive',
         ]);
+
+        $globalMealRules = [];
+        foreach (GlobalMealSyncService::sharedTemplateMealTypes() as $t) {
+            $globalMealRules["global_meals.{$t}.price"] = 'nullable|numeric|min:0';
+            $globalMealRules["global_meals.{$t}.supplement_starter"] = 'nullable|numeric|min:0';
+            $globalMealRules["global_meals.{$t}.supplement_main_course"] = 'nullable|numeric|min:0';
+        }
+        $request->validate($globalMealRules);
 
         // Handle video (new upload, URL, or remove)
         $validated['video'] = $this->resolveRestaurantVideo($request, $restaurant);
@@ -336,6 +416,33 @@ class RestaurantController extends Controller
         $validated['accepts_reservations'] = $request->has('accepts_reservations');
 
         $restaurant->update($validated);
+
+        $sync = app(GlobalMealSyncService::class);
+        foreach (GlobalMealSyncService::sharedTemplateMealTypes() as $mealType) {
+            $priceRaw = $request->input("global_meals.{$mealType}.price");
+            $stRaw = $request->input("global_meals.{$mealType}.supplement_starter");
+            $mcRaw = $request->input("global_meals.{$mealType}.supplement_main_course");
+
+            $overrides = [];
+            if ($priceRaw !== null && trim((string) $priceRaw) !== '') {
+                $overrides['price'] = (float) $priceRaw;
+            }
+
+            $supImport = [];
+            if ($stRaw !== null && trim((string) $stRaw) !== '') {
+                $supImport['starter'] = ['price' => (float) $stRaw];
+            }
+            if ($mcRaw !== null && trim((string) $mcRaw) !== '') {
+                $supImport['main_course'] = ['price' => (float) $mcRaw];
+            }
+            if ($supImport !== []) {
+                $overrides['supplements'] = $supImport;
+            }
+
+            if ($overrides !== []) {
+                $sync->applyTemplateToRestaurantMeal($restaurant, $mealType, $overrides);
+            }
+        }
 
         return redirect()
             ->route('admin.restaurants.index')
@@ -446,12 +553,13 @@ class RestaurantController extends Controller
     public function importForm()
     {
         return view('admin.restaurants.import', [
-            'columns' => $this->importableColumns,
+            'columns' => $this->restaurantSheetColumns(),
+            'globalMealColumnGroups' => $this->globalMealSheetColumnGroups(),
         ]);
     }
 
     /**
-     * Handle import upload (CSV or Excel HTML/XLSX).
+     * Handle import upload (CSV or XLSX only). Images: URL text in the images column only (no embedded pictures).
      */
     public function import(Request $request)
     {
@@ -460,32 +568,64 @@ class RestaurantController extends Controller
         ]);
 
         $ext = strtolower($request->file('file')->getClientOriginalExtension());
-        $allowedExt = ['csv', 'txt', 'xls', 'xlsx'];
-        if (!in_array($ext, $allowedExt, true)) {
-            return back()->with('error', 'Unsupported file type. Please upload CSV, XLS, or XLSX.');
+        $allowedExt = ['csv', 'xlsx'];
+        if (! in_array($ext, $allowedExt, true)) {
+            return back()->with('error', 'Unsupported file type. Please upload a .csv or .xlsx file only.');
         }
 
-        $rows = $this->parseUploadRows($request->file('file'));
-        if (empty($rows)) {
-            return back()->with('error', 'Could not read the uploaded file. Please use the provided sample.');
+        $uploaded = $request->file('file');
+        $parsed = $this->parseRestaurantImportRows($uploaded);
+
+        if ($parsed === null) {
+            Log::warning('[Restaurant import] Parse failed or no valid header row', [
+                'original_name' => $uploaded->getClientOriginalName(),
+                'extension' => $ext,
+                'size' => $uploaded->getSize(),
+                'php_spreadsheet' => $this->isPhpSpreadsheetAvailable(),
+                'vendor_autoload' => is_readable(base_path('vendor/autoload.php')),
+                'phpspreadsheet_package_present' => is_file(base_path('vendor/phpoffice/phpspreadsheet/src/PhpSpreadsheet/IOFactory.php')),
+                'zip_extension' => extension_loaded('zip'),
+                'temp_path' => $uploaded->getRealPath() ?: $uploaded->getPathname(),
+            ]);
+
+            return back()->with(
+                'error',
+                'Could not read the file or find a header row with columns: restaurant_name, address, phone, status. '
+                .'Use the sample download, row 1 (or the first row of your table) must include those exact names.'
+            );
         }
 
-        $headers = $this->normalizeHeaders(array_shift($rows));
+        $headers = $parsed['headers'];
+        $rows = $parsed['data_rows'];
+
         $required = ['restaurant_name', 'address', 'phone', 'status'];
         foreach ($required as $header) {
-            if (!in_array($header, $headers, true)) {
-                return back()->with('error', "Missing required column: {$header}");
+            if (! in_array($header, $headers, true)) {
+                $preview = implode(', ', array_slice(array_filter($headers, fn ($h) => $h !== ''), 0, 12));
+
+                Log::warning('[Restaurant import] Missing required column', [
+                    'missing' => $header,
+                    'headers_first_20' => array_slice($headers, 0, 20),
+                ]);
+
+                return back()->with(
+                    'error',
+                    "Missing required column: {$header}. "
+                    .($preview !== '' ? "Found (first columns): {$preview}. " : '')
+                    .'Use exact headers: restaurant_name, address, phone, status (see sample download).'
+                );
             }
         }
 
         $created = 0;
         $updated = 0;
         $skipped = 0;
-        $errors = [];
         $unchanged = 0;
 
+        $headerRowNumber = $parsed['header_row_number'];
+
         foreach ($rows as $index => $row) {
-            $rowNumber = $index + 2; // account for header row
+            $rowNumber = $headerRowNumber + 1 + $index;
             $assoc = $this->mapRowToAssoc($headers, $row);
 
             if ($this->rowIsEmpty($assoc)) {
@@ -507,6 +647,7 @@ class RestaurantController extends Controller
                 'email' => 'nullable|email|max:255',
                 'alternate_phone' => 'nullable|string|max:20',
                 'website' => 'nullable|url|max:255',
+                'video' => 'nullable|string|max:1000',
                 'star_rating' => 'nullable|integer|min:1|max:5',
                 'price' => 'nullable|numeric|min:0',
                 'cuisine_type' => 'nullable|string|max:100',
@@ -517,7 +658,6 @@ class RestaurantController extends Controller
             ]);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
                 $skipped++;
                 continue;
             }
@@ -529,7 +669,7 @@ class RestaurantController extends Controller
 
             $match = array_filter([
                 'restaurant_name' => $payload['restaurant_name'] ?? null,
-                'phone' => $this->normalizePhone($payload['phone'] ?? null),
+                'phone' => $this->normalizeImportPhone($payload['phone'] ?? null),
             ]);
 
             $restaurant = Restaurant::updateOrCreate(!empty($match) ? $match : ['restaurant_name' => $payload['restaurant_name']], $payload);
@@ -541,17 +681,70 @@ class RestaurantController extends Controller
             } else {
                 $unchanged++;
             }
+
+            $sync = app(GlobalMealSyncService::class);
+            foreach (GlobalMealSyncService::sharedTemplateMealTypes() as $mealType) {
+                $priceCol = 'meal_price_'.$mealType;
+                $stCol = GlobalMealSyncService::supplementStarterColumn($mealType);
+                $mcCol = GlobalMealSyncService::supplementMainCourseColumn($mealType);
+
+                $headerPresent = in_array($priceCol, $headers, true)
+                    || in_array($stCol, $headers, true)
+                    || in_array($mcCol, $headers, true);
+                if (! $headerPresent) {
+                    continue;
+                }
+
+                $overrides = [];
+
+                if (in_array($priceCol, $headers, true)) {
+                    $raw = $assoc[$priceCol] ?? null;
+                    if ($raw !== null && trim((string) $raw) !== '') {
+                if (! is_numeric($raw)) {
+                        continue;
+                    }
+                        $overrides['price'] = (float) $raw;
+                    }
+                }
+
+                $supImport = [];
+                $supplementRowInvalid = false;
+                foreach (['starter' => $stCol, 'main_course' => $mcCol] as $supKey => $col) {
+                    if (! in_array($col, $headers, true)) {
+                        continue;
+                    }
+                    $raw = $assoc[$col] ?? null;
+                    if ($raw === null || trim((string) $raw) === '') {
+                        continue;
+                    }
+                    if (! is_numeric($raw)) {
+                        $supplementRowInvalid = true;
+                        break;
+                    }
+                    $supImport[$supKey] = ['price' => (float) $raw];
+                }
+                if ($supplementRowInvalid) {
+                    continue;
+                }
+                if (! empty($supImport)) {
+                    $overrides['supplements'] = $supImport;
+                }
+
+                if (empty($overrides)) {
+                    continue;
+                }
+
+                $sync->applyTemplateToRestaurantMeal($restaurant, $mealType, $overrides);
+            }
         }
 
         $message = "Import completed. Created: {$created}, Updated: {$updated}, Skipped: {$skipped}, Unchanged: {$unchanged}.";
 
         $flash = $created > 0 || $updated > 0
-            ? ['success' => 'Restaurant data imported successfully. ' . $message]
+            ? ['success' => 'Restaurant data imported successfully.']
             : ['error' => 'No new data imported. ' . $message];
 
-        return back()
-            ->with($flash)
-            ->with('import_errors', $errors);
+        return back()->with($flash);
     }
 
     /**
@@ -559,7 +752,7 @@ class RestaurantController extends Controller
      */
     public function export(Request $request)
     {
-        $format = $this->normalizeFormat($request->get('format'));
+        $format = $this->normalizeImportFormat($request->get('format'));
 
         $query = Restaurant::query();
         if ($request->filled('status') && $request->status !== 'all') {
@@ -572,19 +765,17 @@ class RestaurantController extends Controller
             $query->where('cuisine_type', $request->cuisine_type);
         }
 
-        $restaurants = $query->orderBy('created_at', 'desc')->get();
+        $restaurants = $query->with(['meals' => function ($q) {
+            $q->whereIn('meal_type', GlobalMealSyncService::sharedTemplateMealTypes());
+        }])->orderBy('created_at', 'desc')->get();
         $rows = $this->buildExportRows($restaurants);
 
         $filename = 'restaurants-' . now()->format('Ymd-His') . ($format === 'csv' ? '.csv' : '.xls');
 
         if ($format === 'csv') {
             return response()->streamDownload(function () use ($rows) {
-                $out = fopen('php://output', 'w');
-                foreach ($rows as $row) {
-                    fputcsv($out, $row);
-                }
-                fclose($out);
-            }, $filename, ['Content-Type' => 'text/csv']);
+                $this->writeCsvRowsForDownload($rows);
+            }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
         }
 
         return response()->streamDownload(function () use ($rows) {
@@ -597,184 +788,254 @@ class RestaurantController extends Controller
      */
     public function exportPage()
     {
-        return view('admin.restaurants.export');
+        return view('admin.restaurants.export', [
+            'globalMealColumnGroups' => $this->globalMealSheetColumnGroups(),
+        ]);
     }
 
     /**
-     * Download a sample import file.
+     * Download a sample import file (CSV or real .xlsx when PhpSpreadsheet is available).
      */
     public function sample(Request $request)
     {
-        $format = $this->normalizeFormat($request->get('format'));
+        $format = strtolower((string) $request->get('format', 'xlsx'));
+        if (! in_array($format, ['csv', 'xlsx'], true)) {
+            $format = 'xlsx';
+        }
         $rows = $this->sampleRows();
-        $filename = 'restaurant-import-sample' . ($format === 'csv' ? '.csv' : '.xls');
+        $headers = [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ];
 
         if ($format === 'csv') {
             return response()->streamDownload(function () use ($rows) {
-                $out = fopen('php://output', 'w');
-                foreach ($rows as $row) {
-                    fputcsv($out, $row);
-                }
-                fclose($out);
-            }, $filename, ['Content-Type' => 'text/csv']);
+                $this->writeCsvRowsForDownload($rows);
+            }, 'restaurant-import-sample.csv', array_merge($headers, ['Content-Type' => 'text/csv; charset=UTF-8']));
         }
 
-        return response()->streamDownload(function () use ($rows) {
-            echo $this->generateHtmlExcel($rows);
-        }, $filename, ['Content-Type' => 'application/vnd.ms-excel']);
+        if (! $this->isPhpSpreadsheetAvailable()) {
+            return response()->streamDownload(function () use ($rows) {
+                $this->writeCsvRowsForDownload($rows);
+            }, 'restaurant-import-sample.csv', array_merge($headers, ['Content-Type' => 'text/csv; charset=UTF-8']));
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getActiveSheet()->fromArray($rows, null, 'A1', true);
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new Xlsx($spreadsheet))->save('php://output');
+        }, 'restaurant-import-sample.xlsx', array_merge($headers, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]));
     }
 
     /**
-     * Parse uploaded CSV/XLS/XLSX into row arrays.
+     * Parse CSV or XLSX. Prefer PhpSpreadsheet when autoloaded; otherwise fall back to native ZIP/XML reader.
+     *
+     * @return array{headers: list<string>, data_rows: list<array>, header_row_number: positive-int}|null
      */
-    private function parseUploadRows($file): array
+    private function parseRestaurantImportRows(UploadedFile $uploaded): ?array
     {
-        $extension = strtolower($file->getClientOriginalExtension());
+        $this->ensureComposerAutoload();
 
-        if (in_array($extension, ['csv', 'txt'])) {
-            return $this->parseCsv($file->getRealPath());
+        $path = $uploaded->getRealPath() ?: $uploaded->getPathname();
+        $ext = strtolower($uploaded->getClientOriginalExtension());
+
+        if (! is_string($path) || $path === '' || ! is_readable($path)) {
+            return null;
         }
 
-        // Try XLSX (Zip) first, then fallback to HTML table
-        $xlsxRows = $this->parseXlsx($file->getRealPath());
-        if (!empty($xlsxRows)) {
-            return $xlsxRows;
+        if ($ext === 'csv') {
+            $rows = $this->parseCsv($path);
+
+            return $this->resolveRestaurantTableFromRows($rows);
         }
 
-        return $this->parseHtmlTable($file->getRealPath());
-    }
-
-    private function parseCsv(string $path): array
-    {
-        $rows = [];
-        if (($handle = fopen($path, 'r')) !== false) {
-            while (($data = fgetcsv($handle, 0, ',')) !== false) {
-                // Remove BOM if present
-                if (!empty($data)) {
-                    $data[0] = preg_replace('/^\xEF\xBB\xBF/', '', $data[0]);
-                }
-                $rows[] = $data;
-            }
-            fclose($handle);
-        }
-        return $rows;
-    }
-
-    private function parseXlsx(string $path): array
-    {
-        $zip = new ZipArchive();
-        $rows = [];
-
-        if ($zip->open($path) !== true) {
-            return [];
-        }
-
-        $sharedStrings = [];
-        if (($shared = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
-            libxml_use_internal_errors(true);
-            $xml = simplexml_load_string($shared);
-            libxml_clear_errors();
-            if ($xml && isset($xml->si)) {
-                foreach ($xml->si as $si) {
-                    $text = '';
-                    if (isset($si->t)) {
-                        $text = (string) $si->t;
-                    } elseif (isset($si->r)) {
-                        foreach ($si->r as $run) {
-                            $text .= (string) $run->t;
+        if ($ext === 'xlsx') {
+            if ($this->isPhpSpreadsheetAvailable()) {
+                try {
+                    $spreadsheet = IOFactory::load($path);
+                    foreach ($spreadsheet->getAllSheets() as $sheet) {
+                        $raw = $sheet->toArray(null, true, true, false);
+                        if ($raw === []) {
+                            continue;
+                        }
+                        $resolved = $this->resolveRestaurantTableFromRows($raw);
+                        if ($resolved !== null) {
+                            return $resolved;
                         }
                     }
-                    $sharedStrings[] = $text;
+                } catch (\Throwable $e) {
+                    Log::warning('[Restaurant import] PhpSpreadsheet xlsx load failed, trying native reader', [
+                        'message' => $e->getMessage(),
+                        'exception' => $e::class,
+                    ]);
                 }
             }
-        }
 
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        if ($sheetXml === false) {
-            $zip->close();
-            return [];
-        }
-
-        libxml_use_internal_errors(true);
-        $sheet = simplexml_load_string($sheetXml);
-        libxml_clear_errors();
-        $zip->close();
-
-        if (!$sheet || !isset($sheet->sheetData->row)) {
-            return [];
-        }
-
-        foreach ($sheet->sheetData->row as $row) {
-            $cells = [];
-            foreach ($row->c as $c) {
-                $value = (string) $c->v;
-                if (isset($c['t']) && (string) $c['t'] === 's') {
-                    $index = (int) $value;
-                    $value = $sharedStrings[$index] ?? '';
+            // Native reader: try every worksheet (Sheet1 is not always where the table lives).
+            foreach ($this->listXlsxWorksheetEntries($path) as $entry) {
+                $nativeRows = $this->parseXlsxWorksheet($path, $entry);
+                if ($nativeRows === []) {
+                    continue;
                 }
-                $cells[] = trim($value);
+                $resolved = $this->resolveRestaurantTableFromRows($nativeRows);
+                if ($resolved !== null) {
+                    return $resolved;
+                }
             }
-            $rows[] = $cells;
+
+            return null;
         }
 
-        return $rows;
+        return null;
     }
 
-    private function parseHtmlTable(string $path): array
+    /**
+     * Some deployments omit loading vendor/autoload.php before controllers; ensure it is loaded once.
+     */
+    private function ensureComposerAutoload(): void
     {
-        $content = file_get_contents($path);
-        if (empty($content)) {
-            return [];
+        static $done = false;
+        if ($done) {
+            return;
         }
-
-        libxml_use_internal_errors(true);
-        $dom = new \DOMDocument();
-        $dom->loadHTML($content);
-        libxml_clear_errors();
-
-        $rows = [];
-        foreach ($dom->getElementsByTagName('tr') as $tr) {
-            $row = [];
-            foreach ($tr->getElementsByTagName('td') as $td) {
-                $row[] = trim($td->textContent);
-            }
-            if (!empty($row)) {
-                $rows[] = $row;
-            }
+        $autoload = base_path('vendor/autoload.php');
+        if (is_readable($autoload)) {
+            require_once $autoload;
         }
-
-        return $rows;
+        $done = true;
     }
 
-    private function normalizeHeaders(array $headers): array
+    private function isPhpSpreadsheetAvailable(): bool
     {
-        return array_map(function ($header) {
-            // Convert "Restaurant Name" or "restaurant-name" to "restaurant_name"
-            $normalized = strtolower(trim($header));
-            $normalized = preg_replace('/[^\p{L}\p{N}\s_-]/u', '', $normalized);
-            $normalized = str_replace([' ', '-'], '_', $normalized);
-            // Collapse multiple underscores
-            $normalized = preg_replace('/_+/', '_', $normalized);
-            return $normalized;
+        $this->ensureComposerAutoload();
+
+        // Do not require_once single files: that loads IOFactory but not Shared\File, Reader\*, etc.
+        // (Composer autoload must resolve the whole package.)
+        return class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class, true)
+            && class_exists(\PhpOffice\PhpSpreadsheet\Shared\File::class, true);
+    }
+
+    /**
+     * Find first row (within first 10) that contains required columns; build header + data rows.
+     *
+     * @param  list<array>  $rows
+     * @return array{headers: list<string>, data_rows: list<array>, header_row_number: positive-int}|null
+     */
+    private function resolveRestaurantTableFromRows(array $rows): ?array
+    {
+        if ($rows === []) {
+            return null;
+        }
+
+        $maxScan = min(10, count($rows));
+        for ($i = 0; $i < $maxScan; $i++) {
+            $rowCells = $rows[$i];
+            if (! is_array($rowCells)) {
+                continue;
+            }
+            $headers = $this->canonicalizeRestaurantImportHeaders(
+                $this->normalizeHeaders(array_map(function ($cell) {
+                    if ($cell === null) {
+                        return '';
+                    }
+
+                    return trim((string) $cell);
+                }, $rowCells))
+            );
+            if (! $this->headersHaveRestaurantImportRequired($headers)) {
+                continue;
+            }
+
+            $dataRows = [];
+            foreach (array_slice($rows, $i + 1) as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                $dataRows[] = array_map(function ($cell) {
+                    if ($cell === null) {
+                        return '';
+                    }
+
+                    return trim((string) $cell);
+                }, $row);
+            }
+
+            return [
+                'headers' => $headers,
+                'data_rows' => $dataRows,
+                'header_row_number' => $i + 1,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Map common spreadsheet header variants to import column names.
+     *
+     * @param  list<string>  $headers
+     * @return list<string>
+     */
+    private function canonicalizeRestaurantImportHeaders(array $headers): array
+    {
+        $map = [
+            'restaurantname' => 'restaurant_name',
+            'restaurant' => 'restaurant_name',
+            'resto_name' => 'restaurant_name',
+            'business_name' => 'restaurant_name',
+            'restaurant_title' => 'restaurant_name',
+            'name_of_restaurant' => 'restaurant_name',
+            'nameofrestaurant' => 'restaurant_name',
+            'restaurant_names' => 'restaurant_name',
+            'mobile' => 'phone',
+            'mobile_phone' => 'phone',
+            'phone_number' => 'phone',
+            'telephone' => 'phone',
+            'tel' => 'phone',
+            'contact_number' => 'phone',
+            'street' => 'address',
+            'street_address' => 'address',
+            'full_address' => 'address',
+            'location' => 'address',
+            'addr' => 'address',
+            'restaurant_status' => 'status',
+            'active_status' => 'status',
+            // video aliases
+            'video_url' => 'video',
+            'video_link' => 'video',
+            'videourl' => 'video',
+            'videolink' => 'video',
+            'restaurant_video' => 'video',
+        ];
+
+        return array_map(function (string $h) use ($map): string {
+            if (isset($map[$h])) {
+                return $map[$h];
+            }
+            $compact = str_replace(['_', '-', ' '], '', $h);
+            if ($compact === 'restaurantname') {
+                return 'restaurant_name';
+            }
+
+            return $h;
         }, $headers);
     }
 
-    private function mapRowToAssoc(array $headers, array $row): array
+    /**
+     * @param  list<string>  $headers
+     */
+    private function headersHaveRestaurantImportRequired(array $headers): bool
     {
-        $assoc = [];
-        foreach ($headers as $index => $header) {
-            $assoc[$header] = $row[$index] ?? null;
-        }
-        return $assoc;
-    }
-
-    private function rowIsEmpty(array $row): bool
-    {
-        foreach ($row as $value) {
-            if (!is_null($value) && trim((string) $value) !== '') {
+        foreach (['restaurant_name', 'address', 'phone', 'status'] as $col) {
+            if (! in_array($col, $headers, true)) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -786,11 +1047,35 @@ class RestaurantController extends Controller
             $payload[$column] = $this->normalizeValue($column, $value);
         }
 
+        // Backward-compatible aliases for image columns in import sheets.
+        if (empty($payload['images'])) {
+            $imageAliasKeys = ['image', 'image_url', 'image_urls', 'photo', 'photos'];
+            foreach ($imageAliasKeys as $alias) {
+                if (isset($row[$alias])) {
+                    $payload['images'] = $this->normalizeValue('images', $row[$alias]);
+                    if (!empty($payload['images'])) {
+                        break;
+                    }
+                }
+            }
+        }
+
         return $payload;
     }
 
     private function normalizeValue(string $column, $value)
     {
+        if (in_array($column, ['parking_available', 'wifi_available', 'accepts_reservations'], true)) {
+            if ($value === null) {
+                return false;
+            }
+            $value = is_string($value) ? trim($value) : $value;
+            if ($value === '') {
+                return false;
+            }
+            return $this->normalizeBoolean($value);
+        }
+
         if ($value === null) {
             return null;
         }
@@ -798,10 +1083,6 @@ class RestaurantController extends Controller
         $value = is_string($value) ? trim($value) : $value;
         if ($value === '') {
             return null;
-        }
-
-        if (in_array($column, ['parking_available', 'wifi_available', 'accepts_reservations'], true)) {
-            return $this->normalizeBoolean($value);
         }
 
         if ($column === 'status') {
@@ -821,16 +1102,51 @@ class RestaurantController extends Controller
             return is_numeric($value) ? (int) $value : null;
         }
 
+        if ($column === 'images') {
+            return $this->normalizeImportedImages($value);
+        }
+
+        if ($column === 'video') {
+            // Accept a URL or a storage path; strip surrounding whitespace
+            $v = is_string($value) ? trim($value) : null;
+            return ($v !== null && $v !== '') ? $v : null;
+        }
+
         return $value;
     }
 
-    private function normalizePhone($value): ?string
+    /**
+     * Normalize imported images from Excel/CSV.
+     * Accepts a single URL/path or multiple values split by comma, semicolon, pipe, or newline.
+     */
+    private function normalizeImportedImages($value): ?array
     {
         if ($value === null) {
             return null;
         }
-        $digits = preg_replace('/\D+/', '', (string) $value);
-        return $digits !== '' ? $digits : trim((string) $value);
+
+        if (is_array($value)) {
+            $items = $value;
+        } else {
+            $stringValue = trim((string) $value);
+            if ($stringValue === '') {
+                return null;
+            }
+
+            $items = preg_split('/[,\n;|]+/', $stringValue) ?: [];
+        }
+
+        $items = array_values(array_filter(array_map(function ($item) {
+            return trim((string) $item);
+        }, $items), function ($item) {
+            return $item !== '';
+        }));
+
+        if (empty($items)) {
+            return null;
+        }
+
+        return array_values(array_unique($items));
     }
 
     private function normalizeBoolean($value): bool
@@ -839,20 +1155,24 @@ class RestaurantController extends Controller
         return in_array(strtolower((string) $value), $trueValues, true);
     }
 
-    private function normalizeFormat(?string $format): string
-    {
-        $format = strtolower($format ?? 'xls');
-        return in_array($format, ['csv', 'xls', 'xlsx'], true) ? $format : 'xls';
-    }
-
     private function buildExportRows($restaurants): array
     {
         $rows = [];
-        // Keep headers identical to import template (snake_case)
-        $rows[] = $this->importableColumns;
+        $rows[] = $this->restaurantSheetColumns();
 
         foreach ($restaurants as $restaurant) {
-            $rows[] = [
+            $byType = $restaurant->meals->keyBy('meal_type');
+            $priceCells = [];
+            foreach (GlobalMealSyncService::sharedTemplateMealTypes() as $type) {
+                $m = $byType->get($type);
+                $priceCells[] = $m && $m->price !== null ? $m->price : '';
+                $sup = $m && is_array($m->supplements) ? $m->supplements : [];
+                $st = $sup['starter'] ?? [];
+                $mc = $sup['main_course'] ?? [];
+                $priceCells[] = isset($st['price']) && is_numeric($st['price']) ? $st['price'] : '';
+                $priceCells[] = isset($mc['price']) && is_numeric($mc['price']) ? $mc['price'] : '';
+            }
+            $rows[] = array_merge([
                 $restaurant->restaurant_name,
                 $restaurant->description,
                 $restaurant->address,
@@ -864,6 +1184,8 @@ class RestaurantController extends Controller
                 $restaurant->email,
                 $restaurant->alternate_phone,
                 $restaurant->website,
+                $this->formatImagesForExport($restaurant->images),
+                $restaurant->video_url ?? $restaurant->video,  // export full URL if stored path
                 $restaurant->star_rating,
                 $restaurant->price,
                 $restaurant->cuisine_type,
@@ -874,60 +1196,209 @@ class RestaurantController extends Controller
                 $restaurant->accepts_reservations ? 'Yes' : 'No',
                 $restaurant->tax_number,
                 $restaurant->license_number,
-            ];
+            ], $priceCells);
         }
 
         return $rows;
     }
 
-    private function generateHtmlExcel(array $rows): string
+    /**
+     * Convert images field to export-friendly URL list.
+     */
+    private function formatImagesForExport($images): ?string
     {
-        $html = '<table border="1"><thead><tr>';
-        foreach ($rows[0] as $heading) {
-            $html .= '<th>' . htmlspecialchars((string) $heading) . '</th>';
+        if ($images === null || $images === '') {
+            return null;
         }
-        $html .= '</tr></thead><tbody>';
 
-        foreach (array_slice($rows, 1) as $row) {
-            $html .= '<tr>';
-            foreach ($row as $cell) {
-                $html .= '<td>' . htmlspecialchars((string) $cell) . '</td>';
+        $list = $images;
+        if (is_string($images)) {
+            $decoded = json_decode($images, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $list = $decoded;
+            } else {
+                $list = preg_split('/[,\n;|]+/', $images) ?: [];
             }
-            $html .= '</tr>';
         }
 
-        $html .= '</tbody></table>';
-        return $html;
+        if (!is_array($list)) {
+            $list = [(string) $list];
+        }
+
+        $list = array_values(array_filter(array_map(function ($item) {
+            $value = trim((string) $item);
+            if ($value === '') {
+                return null;
+            }
+
+            return ImageService::getUrl($value);
+        }, $list)));
+
+        if (empty($list)) {
+            return null;
+        }
+
+        return implode(' | ', array_values(array_unique($list)));
     }
 
+    /**
+     * Sample spreadsheet rows: header + examples (full, minimal, prices-only, mixed supplements).
+     * Meal tail order per type: meal_price_{type}, meal_supplement_starter_{type}, meal_supplement_main_course_{type}.
+     */
     private function sampleRows(): array
     {
+        $header = $this->restaurantSheetColumns();
+        $globalTypes = GlobalMealSyncService::sharedTemplateMealTypes();
+        $priceColumnSummary = implode(', ', array_map(static fn (string $t) => 'meal_price_'.$t, $globalTypes));
+
+        $baseFull = [
+            'The Spice Route',
+            'Cozy family dining with regional specials',
+            '123 Market Street',
+            'Delhi',
+            'Delhi',
+            'India',
+            '110001',
+            '+91-9876543210',
+            'hello@spiceroute.in',
+            '+91-9876543211',
+            'https://spiceroute.in',
+            'https://example.com/restaurant/front.jpg | https://example.com/restaurant/inside.jpg',
+            'https://example.com/storage/media-library/videos/restaurant-tour.mp4',
+            4,
+            1200,
+            'North Indian',
+            80,
+            'active',
+            'Yes',
+            'Yes',
+            'Yes',
+            '29ABCDE1234F2Z5',
+            'LIC-2024-123',
+        ];
+
+        $baseMinimal = [
+            'Minimal Cafe',
+            '',
+            '1 Short Street',
+            '',
+            '',
+            '',
+            '',
+            '+91-9111111111',
+            '',
+            '',
+            '',
+            '',
+            '',   // video — leave blank if none
+            '',
+            '',
+            '',
+            '',
+            'active',
+            '',
+            '',
+            '',
+            '',
+            '',
+        ];
+
+        $basePricesOnly = [
+            'Main Price Bistro',
+            'Example: set EUR prices using tail columns '.$priceColumnSummary.'; supplement columns can stay empty. Menu text comes from Global menu.',
+            '45 High Street',
+            'Mumbai',
+            'Maharashtra',
+            'India',
+            '400001',
+            '+91-9222222222',
+            'chef@mainprice.example',
+            '',
+            'https://mainprice.example',
+            '',
+            '',   // video
+            3,
+            800,
+            'Multi-cuisine',
+            50,
+            'active',
+            'No',
+            'Yes',
+            'No',
+            '',
+            '',
+        ];
+
+        $baseMixed = [
+            'Mixed Supplements Kitchen',
+            'Example: fill only some supplement columns; blanks are left unchanged for that field.',
+            '88 Food Court Lane',
+            'Bengaluru',
+            'Karnataka',
+            'India',
+            '560001',
+            '+91-9333333333',
+            '',
+            '',
+            '',
+            '',
+            5,
+            2000,
+            'South Indian',
+            120,
+            'active',
+            'Yes',
+            'Yes',
+            'Yes',
+            '',
+            '',
+        ];
+
+        $types = $globalTypes;
+        $mealFull = [];
+        $demoMealPrices = [899, 1099, 2499, 3199];
+        foreach ($types as $i => $_) {
+            $mealFull[] = $demoMealPrices[$i] ?? 1000;
+            $mealFull[] = 50 + ($i * 10);
+            $mealFull[] = 75 + ($i * 10);
+        }
+
+        $mealEmpty = array_fill(0, count($types) * 3, '');
+
+        $mealPricesOnly = [];
+        foreach ($types as $i => $_) {
+            $mealPricesOnly[] = $demoMealPrices[$i] ?? 1000;
+            $mealPricesOnly[] = '';
+            $mealPricesOnly[] = '';
+        }
+
+        $mealMixed = [];
+        foreach ($types as $type) {
+            if ($type === 'standard_buffet_lunch') {
+                $mealMixed[] = 950;
+                $mealMixed[] = 55;
+                $mealMixed[] = '';
+            } elseif ($type === 'standard_buffet_dinner') {
+                $mealMixed[] = '';
+                $mealMixed[] = '';
+                $mealMixed[] = '';
+            } elseif ($type === 'cocktail_dinner_without_liquor') {
+                $mealMixed[] = 1599;
+                $mealMixed[] = '';
+                $mealMixed[] = 99;
+            } else {
+                $mealMixed[] = '';
+                $mealMixed[] = 120;
+                $mealMixed[] = '';
+            }
+        }
+
         return [
-            // Use exact importable column names for the sample header
-            $this->importableColumns,
-            [
-                'The Spice Route',
-                'Cozy family dining with regional specials',
-                '123 Market Street',
-                'Delhi',
-                'Delhi',
-                'India',
-                '110001',
-                '+91-9876543210',
-                'hello@spiceroute.in',
-                '+91-9876543211',
-                'https://spiceroute.in',
-                4,
-                1200,
-                'North Indian',
-                80,
-                'active',
-                'Yes',
-                'Yes',
-                'Yes',
-                '29ABCDE1234F2Z5',
-                'LIC-2024-123',
-            ],
+            $header,
+            array_merge($baseFull, $mealFull),
+            array_merge($baseMinimal, $mealEmpty),
+            array_merge($basePricesOnly, $mealPricesOnly),
+            array_merge($baseMixed, $mealMixed),
         ];
     }
 }

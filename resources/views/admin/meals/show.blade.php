@@ -62,37 +62,16 @@
                     <h3 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 20px;">Pricing</h3>
                     
                     <div style="margin-bottom: 16px;">
-                        <label style="display: block; font-weight: 600; color: #4a5568; margin-bottom: 4px;">Price (INR)</label>
+                        <label style="display: block; font-weight: 600; color: #4a5568; margin-bottom: 4px;">Price (EUR)</label>
                         <p style="color: #2d3748; font-size: 18px; font-weight: 600;">
-                            @if($meal->price_inr)
-                                <span style="color: #48bb78;">{{ $meal->price_inr_formatted }}</span>
+                            @if($meal->price)
+                                <span style="color: #48bb78;">{{ $meal->price_eur_formatted }}</span>
                             @else
                                 <span style="color: #718096;">Not set</span>
                             @endif
                         </p>
                     </div>
 
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: block; font-weight: 600; color: #4a5568; margin-bottom: 4px;">Local Currency</label>
-                        <p style="color: #2d3748; font-size: 16px;">
-                            @if($meal->local_currency)
-                                {{ $meal->local_currency }}
-                            @else
-                                <span style="color: #718096;">Not set</span>
-                            @endif
-                        </p>
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: block; font-weight: 600; color: #4a5568; margin-bottom: 4px;">Local Price</label>
-                        <p style="color: #2d3748; font-size: 18px; font-weight: 600;">
-                            @if($meal->local_price_formatted)
-                                <span style="color: #667eea;">{{ $meal->local_price_formatted }}</span>
-                            @else
-                                <span style="color: #718096;">Not set</span>
-                            @endif
-                        </p>
-                    </div>
                 </div>
             </div>
 
@@ -110,8 +89,11 @@
                             <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
                                 <h4 style="margin-bottom: 8px; color: #2d3748;">Starter Supplement</h4>
                                 <p style="color: #48bb78; font-size: 18px; font-weight: 600;">
-                                    ₹{{ number_format($meal->supplements['starter']['price'] ?? 0, 2) }}
+                                    €{{ number_format($meal->supplements['starter']['price'] ?? 0, 2) }}
                                 </p>
+                                @if(!empty($meal->supplements['starter']['description']))
+                                    <p style="margin-top: 12px; color: #2d3748; font-size: 14px; line-height: 1.5; white-space: pre-wrap;"><strong>Food items:</strong> {{ $meal->supplements['starter']['description'] }}</p>
+                                @endif
                             </div>
                         @endif
 
@@ -119,8 +101,11 @@
                             <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
                                 <h4 style="margin-bottom: 8px; color: #2d3748;">Main Course Supplement</h4>
                                 <p style="color: #48bb78; font-size: 18px; font-weight: 600;">
-                                    ₹{{ number_format($meal->supplements['main_course']['price'] ?? 0, 2) }}
+                                    €{{ number_format($meal->supplements['main_course']['price'] ?? 0, 2) }}
                                 </p>
+                                @if(!empty($meal->supplements['main_course']['description']))
+                                    <p style="margin-top: 12px; color: #2d3748; font-size: 14px; line-height: 1.5; white-space: pre-wrap;"><strong>Food items:</strong> {{ $meal->supplements['main_course']['description'] }}</p>
+                                @endif
                             </div>
                         @endif
                     </div>

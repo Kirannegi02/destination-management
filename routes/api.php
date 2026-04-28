@@ -50,6 +50,8 @@ Route::prefix('vehicles')->group(function () {
 Route::post('/transports/quote', [\App\Http\Controllers\Api\TransportQuoteController::class, 'quote']);
 Route::post('/transports/quote-request', [\App\Http\Controllers\Api\TransportQuoteController::class, 'store']);
 Route::post('/transport-bookings', [\App\Http\Controllers\Api\TransportQuoteController::class, 'store']);
+Route::get('/transport-zones', [\App\Http\Controllers\Api\TransportZoneController::class, 'index']);
+Route::get('/transport-zones/{id}', [\App\Http\Controllers\Api\TransportZoneController::class, 'show'])->whereNumber('id');
 
 // Public souvenir list (no authentication required) – filter by country
 Route::prefix('souvenirs')->group(function () {
@@ -59,13 +61,20 @@ Route::prefix('souvenirs')->group(function () {
 
 // Public restaurant routes (no authentication required)
 Route::prefix('restaurants')->group(function () {
-    // Get list of restaurants with filters (public)
+    // Get list of restaurants with filters (pass include_meals=true to embed meals)
     Route::get('/', [\App\Http\Controllers\Api\RestaurantController::class, 'index']);
 
-    // Get single restaurant by ID (public)
+    // Get single restaurant by ID — always includes active meals
     Route::get('/{id}', [\App\Http\Controllers\Api\RestaurantController::class, 'show'])
         ->whereNumber('id');
 });
+
+// Public meals endpoint — list active meals for a given restaurant
+// Query params: restaurant_id (required), status (optional: active|all), global_only (optional: true)
+Route::get('/meals', [MealController::class, 'index']);
+
+// Global meal templates — master menu managed by admin (no restaurant-specific pricing)
+Route::get('/global-meals', [MealController::class, 'globalMenu']);
 
 // Protected API routes (require JWT authentication)
 Route::middleware('auth:api')->group(function () {
@@ -96,10 +105,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/{id}/cancel', [\App\Http\Controllers\Api\SightseeingBookingController::class, 'cancel'])->whereNumber('id');
     });
     
-    // Meals API routes
-    Route::prefix('meals')->group(function () {
-        Route::get('/', [MealController::class, 'index']);
-    });
+    // (meals/index is public — see above)
     Route::prefix('guide-bookings')->group(function () {
         Route::get('/', [GuideBookingController::class, 'index']);
         Route::post('/', [GuideBookingController::class, 'store']);
@@ -110,12 +116,16 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\TransportQuoteController::class, 'index']);
         Route::get('/{id}', [\App\Http\Controllers\Api\TransportQuoteController::class, 'show'])->whereNumber('id');
     });
+
+    // Unified dashboard bookings API (all modules for current user/agent)
+    Route::get('/my-bookings', [\App\Http\Controllers\Api\DashboardController::class, 'index']);
     
     // Bookings (no payment)
     Route::prefix('bookings')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\BookingController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Api\BookingController::class, 'store']);
-        Route::post('/{id}/cancel', [\App\Http\Controllers\Api\BookingController::class, 'cancel']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\BookingController::class, 'show'])->whereNumber('id');
+        Route::post('/{id}/cancel', [\App\Http\Controllers\Api\BookingController::class, 'cancel'])->whereNumber('id');
     });
 
     // Souvenir orders & addresses

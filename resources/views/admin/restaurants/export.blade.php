@@ -5,19 +5,40 @@
 
 @section('content')
     <div class="card">
-        <div class="card-header" style="align-items: flex-start;">
-            <div>
-                <h2 class="card-title">Export Stores</h2>
-                <p style="color: #718096; font-size: 14px; margin-top: 4px;">
-                    Download all restaurant data as XLS or CSV. Field names match the import template so you can edit and re-import safely.
-                </p>
-            </div>
+        <div class="card-header">
+            <h2 class="card-title">Export Stores</h2>
         </div>
 
-        <div style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-            <div style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: #f8fafc;">
-                <h3 style="margin-bottom: 8px; color: #2d3748;">Step 1</h3>
-              
+        <div style="padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            @if(!empty($globalMealColumnGroups))
+                <div style="width: 100%; max-width: 720px; padding: 14px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 13px; color: #2d3748;">
+                    <strong>Export includes global meal columns</strong> (same names as restaurant import): for each plan below, the file has price plus starter and main-course supplement amounts when set.
+                    <div style="overflow-x: auto; margin-top: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                            <thead>
+                                <tr style="background: #edf2f7; text-align: left;">
+                                    <th style="padding: 6px 8px; border: 1px solid #e2e8f0;">Plan</th>
+                                    <th style="padding: 6px 8px; border: 1px solid #e2e8f0;">Price column</th>
+                                    <th style="padding: 6px 8px; border: 1px solid #e2e8f0;">Supplements</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($globalMealColumnGroups as $g)
+                                    <tr>
+                                        <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ $g['label'] }}</td>
+                                        <td style="padding: 6px 8px; border: 1px solid #e2e8f0;"><code style="word-break: break-all;">{{ $g['price_column'] }}</code></td>
+                                        <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">
+                                            <code style="word-break: break-all;">{{ $g['supplement_starter_column'] }}</code>,
+                                            <code style="word-break: break-all;">{{ $g['supplement_main_course_column'] }}</code>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+            <div style="width: 100%; max-width: 400px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; background: #f8fafc;">
                 <form action="{{ route('admin.restaurants.export') }}" method="GET" style="display: flex; flex-direction: column; gap: 12px;">
                     <label style="font-weight: 600; color: #2d3748;">File format</label>
                     <select name="format" style="padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px;">
@@ -30,20 +51,6 @@
                     </button>
                 </form>
             </div>
-
-            <div style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: white;">
-                <h3 style="margin-bottom: 8px; color: #2d3748;">Step 2</h3>
-                <p style="color: #4a5568; font-size: 14px; margin-bottom: 12px;">
-                    Use the downloaded file to make edits, then re-import using Bulk Import. Keep column names unchanged to avoid validation issues.
-                </p>
-                <ul style="color: #4a5568; font-size: 14px; margin-left: 18px; list-style: disc;">
-                    <li>Download in .xls for Excel-friendly formatting.</li>
-                    <li>Download in .csv for lightweight editing.</li>
-                    <li>Headers match import: restaurant_name, address, phone, status, etc.</li>
-                </ul>
-            </div>
         </div>
     </div>
 @endsection
-
-

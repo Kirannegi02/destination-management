@@ -209,11 +209,11 @@ class UserController extends Controller
         $souvenirTotalAmount = $souvenirOrders->sum(fn ($o) => (float) $o->total);
         // Monetary totals per module (from listed records)
         $totals = [
-            'restaurant' => ['amount' => $restaurantBookings->sum(fn ($b) => (float) ($b->estimated_total ?? 0)), 'currency' => 'INR'],
-            'guide' => ['amount' => $guideBookings->sum(fn ($b) => (float) ($b->estimated_total ?? $b->price ?? 0)), 'currency' => $guideBookings->first()->currency ?? 'INR'],
+            'restaurant' => ['amount' => $restaurantBookings->sum(fn ($b) => (float) ($b->estimated_total ?? 0)), 'currency' => 'EUR'],
+            'guide' => ['amount' => $guideBookings->sum(fn ($b) => (float) ($b->estimated_total ?? $b->price ?? 0)), 'currency' => $guideBookings->first()->currency ?? 'EUR'],
             'sightseeing' => ['amount' => $sightseeingBookings->sum(fn ($b) => (float) ($b->price ?? 0)), 'currency' => $sightseeingBookings->first()->currency ?? 'CHF'],
             'souvenir' => ['amount' => $souvenirTotalAmount, 'currency' => $souvenirOrders->first()->currency ?? 'EUR'],
-            'transport' => ['amount' => $transportBookings->sum(fn ($b) => (float) ($b->total_amount ?? 0)), 'currency' => $transportBookings->first()->currency ?? 'INR'],
+            'transport' => ['amount' => $transportBookings->sum(fn ($b) => (float) ($b->total_amount ?? 0)), 'currency' => $transportBookings->first()->currency ?? 'EUR'],
         ];
         $stats = [
             'restaurant' => ['total' => $restaurantBookings->count(), 'pending' => $restaurantBookings->where('status', 'pending')->count(), 'confirmed' => $restaurantBookings->where('status', 'confirmed')->count()],

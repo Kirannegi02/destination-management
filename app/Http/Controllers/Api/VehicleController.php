@@ -40,7 +40,7 @@ class VehicleController extends Controller
                 'capacity_seats' => $v->capacity_seats,
                 'description' => $v->description,
                 'image' => $v->image_url,
-                'currency' => $v->currency ?? 'INR',
+                'currency' => $v->currency ?? 'EUR',
             ];
         });
 
@@ -79,7 +79,7 @@ class VehicleController extends Controller
                 'capacity_seats' => $vehicle->capacity_seats,
                 'description' => $vehicle->description,
                 'image' => $vehicle->image_url,
-                'currency' => $vehicle->currency ?? 'INR',
+                'currency' => $vehicle->currency ?? 'EUR',
             ],
         ], 200);
     }

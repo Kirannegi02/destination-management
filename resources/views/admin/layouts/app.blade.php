@@ -497,12 +497,41 @@
                 </div>
                 
                 @php
-                    $isMealsActive = request()->routeIs('admin.meals.*');
+                    $isMealsActive = request()->routeIs('admin.meals.*') || request()->routeIs('admin.meal-templates.*');
+                    $mealsIndexActive = request()->routeIs('admin.meals.index');
+                    $mealsCreateActive = request()->routeIs('admin.meals.create');
+                    $mealsImportActive = request()->routeIs('admin.meals.import*');
+                    $mealsExportActive = request()->routeIs('admin.meals.export*');
+                    $mealTemplatesActive = request()->routeIs('admin.meal-templates.*');
                 @endphp
-                <a href="{{ route('admin.meals.index') }}" 
-                   class="menu-item {{ $isMealsActive ? 'active' : '' }}">
-                    🍛 Meals
-                </a>
+                <div class="menu-item has-submenu {{ $isMealsActive ? 'active' : '' }}"
+                     onclick="toggleSubmenu(this)"
+                     style="cursor: pointer;">
+                    🍱 Meals
+                    <span class="submenu-arrow" style="float: right; margin-top: 2px;">{{ $isMealsActive ? '▼' : '▶' }}</span>
+                </div>
+                <div class="submenu {{ $isMealsActive ? 'expanded' : '' }}">
+                    <a href="{{ route('admin.meals.create') }}"
+                       class="submenu-item {{ $mealsCreateActive ? 'active' : '' }}">
+                        ➕ Add Meal
+                    </a>
+                    <a href="{{ route('admin.meals.index') }}"
+                       class="submenu-item {{ $mealsIndexActive ? 'active' : '' }}">
+                        📋 All Meals
+                    </a>
+                    <a href="{{ route('admin.meal-templates.index') }}"
+                       class="submenu-item {{ $mealTemplatesActive ? 'active' : '' }}">
+                        🌍 Global menu
+                    </a>
+                    <a href="{{ route('admin.meals.import.form') }}"
+                       class="submenu-item {{ $mealsImportActive ? 'active' : '' }}">
+                        ⬆️ Bulk Import
+                    </a>
+                    <a href="{{ route('admin.meals.export.page') }}"
+                       class="submenu-item {{ $mealsExportActive ? 'active' : '' }}">
+                        ⬇️ Bulk Export
+                    </a>
+                </div>
                 
                 @php
                     $isTransportActive = request()->routeIs('admin.transports.*') || request()->routeIs('admin.vehicles.*');
@@ -633,6 +662,9 @@
                         ✅ Approved
                     </a>
                 </div>
+                <a href="{{ route('admin.media-library.index') }}" class="menu-item {{ request()->routeIs('admin.media-library.*') ? 'active' : '' }}">
+                    🖼️ Media library
+                </a>
                 <a href="{{ route('admin.settings.index') }}" class="menu-item {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
                     ⚙️ Settings
                 </a>

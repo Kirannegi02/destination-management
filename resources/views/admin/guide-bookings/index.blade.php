@@ -98,7 +98,7 @@
                                     @if($booking->package)
                                         <div style="font-weight: 600;">{{ $booking->package->service_name ?? $booking->package->service_type }}</div>
                                         @if($booking->package->standard_price)
-                                            <div style="color: #48bb78;">₹{{ number_format((float) $booking->package->standard_price, 2) }}</div>
+                                            <div style="color: #48bb78;">€{{ number_format((float) $booking->package->standard_price, 2) }}</div>
                                         @endif
                                         <small style="color: #718096;">ID: {{ $booking->guide_package_id }}</small>
                                     @else
@@ -127,9 +127,9 @@
                                 <td style="padding: 12px;">{{ $booking->guests ?? '—' }}</td>
                                 <td style="padding: 12px;">
                                     @if($booking->estimated_total !== null)
-                                        ₹{{ number_format((float) $booking->estimated_total, 2) }}
+                                        €{{ number_format((float) $booking->estimated_total, 2) }}
                                     @elseif($booking->price !== null)
-                                        ₹{{ number_format((float) $booking->price, 2) }}
+                                        €{{ number_format((float) $booking->price, 2) }}
                                     @else
                                         N/A
                                     @endif

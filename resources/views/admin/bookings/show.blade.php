@@ -53,26 +53,101 @@
                     <p style="font-weight: 600;">N/A</p>
                 @endif
 
+                {{-- ── Meals Breakdown ─────────────────────────────────────── --}}
+                @php
+                    $mealsData = $booking->meals_data ?? [];
+                    // Fall back to legacy scalar columns when no meals_data stored
+                    if (empty($mealsData) && $booking->meal_id) {
+                        $price    = $booking->meal_price ? (float) $booking->meal_price : null;
+                        $subtotal = $price ? $price * ($booking->guests ?? 1) : null;
+                        $mealsData = [[
+                            'meal_id'         => $booking->meal_id,
+                            'meal_type_label' => $booking->meal?->meal_type_label ?? $booking->meal_type ?? '—',
+                            'menu_description'=> $booking->meal?->menu_description ?? null,
+                            'price_per_person'=> $price,
+                            'guests'          => $booking->guests,
+                            'subtotal'        => $subtotal,
+                        ]];
+                    }
+                @endphp
+
                 <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
-                    <h4 style="color: #2d3748; margin-bottom: 6px;">Meal</h4>
-                    @if($booking->meal)
-                        <p style="margin: 0; font-weight: 600;">
-                            <a href="{{ route('admin.meals.show', $booking->meal_id) }}" style="color: #2b6cb0; text-decoration: none;">
-                                {{ $booking->meal->meal_type_label }}
-                            </a>
-                        </p>
-                    
-                        @if($booking->meal_price_inr)
-                            <p style="color: #48bb78; margin-top: 4px;">₹{{ number_format((float) $booking->meal_price_inr, 2) }}</p>
-                        @endif
-                        <p style="color: #718096; margin-top: 4px;">Meal ID: {{ $booking->meal_id }}</p>
-                    @elseif($booking->meal_type)
-                        <p style="margin: 0; font-weight: 600;">{{ $booking->meal_type }}</p>
-                        @if($booking->meal_price_inr)
-                            <p style="color: #48bb78; margin-top: 4px;">₹{{ number_format((float) $booking->meal_price_inr, 2) }}</p>
-                        @endif
+                    <h4 style="color: #2d3748; margin-bottom: 10px;">
+                        Meals
+                        <span style="font-weight: 400; font-size: 13px; color: #718096;">
+                            ({{ count($mealsData) }} {{ count($mealsData) === 1 ? 'item' : 'items' }})
+                        </span>
+                    </h4>
+
+                    @if(count($mealsData))
+                        @foreach($mealsData as $item)
+                            @php
+                                $supSelected = $item['supplements_selected'] ?? [];
+                            @endphp
+                            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
+
+                                {{-- Meal header --}}
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        @if(!empty($item['meal_id']))
+                                            <a href="{{ route('admin.meals.show', $item['meal_id']) }}"
+                                               style="font-weight: 600; color: #2b6cb0; text-decoration: none; font-size: 15px;">
+                                                {{ $item['meal_type_label'] ?? '—' }}
+                                            </a>
+                                            <span style="color: #718096; font-size: 12px; margin-left: 6px;">
+                                                ID: {{ $item['meal_id'] }}
+                                            </span>
+                                        @else
+                                            <span style="font-weight: 600; font-size: 15px;">{{ $item['meal_type_label'] ?? '—' }}</span>
+                                        @endif
+
+                                        @if(!empty($item['menu_description']))
+                                            <p style="color: #718096; font-size: 12px; margin: 3px 0 0;">
+                                                {{ $item['menu_description'] }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                    <div style="text-align: right;">
+                                        @if(isset($item['price_per_person']) && $item['price_per_person'] !== null)
+                                            <span style="font-size: 13px; color: #4a5568;">
+                                                €{{ number_format((float)$item['price_per_person'], 2) }} × {{ $item['guests'] ?? '—' }} guests
+                                            </span><br>
+                                        @endif
+                                        @if(isset($item['subtotal']) && $item['subtotal'] !== null)
+                                            <span style="font-weight: 700; color: #2d3748; font-size: 15px;">
+                                                €{{ number_format((float)$item['subtotal'], 2) }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Supplements selected --}}
+                                @if(!empty($supSelected))
+                                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                                        <p style="font-size: 12px; color: #718096; margin-bottom: 4px; font-weight: 600;">
+                                            Supplements Added
+                                        </p>
+                                        @foreach($supSelected as $supKey => $sup)
+                                            <div style="display: flex; justify-content: space-between; font-size: 13px; color: #4a5568; margin-bottom: 2px;">
+                                                <span>+ {{ ucwords(str_replace('_', ' ', $supKey)) }}</span>
+                                                <span>
+                                                    @if(!empty($sup['price']))
+                                                        €{{ number_format((float)$sup['price'], 2) }}
+                                                        × {{ $item['guests'] ?? 1 }}
+                                                        = <strong>€{{ number_format((float)$sup['price'] * ($item['guests'] ?? 1), 2) }}</strong>
+                                                    @else
+                                                        Price N/A
+                                                    @endif
+                                                </span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                            </div>
+                        @endforeach
                     @else
-                        <p style="color: #718096; margin: 0;">Not provided</p>
+                        <p style="color: #718096; margin: 0;">No meal selected.</p>
                     @endif
                 </div>
             </div>
@@ -116,13 +191,22 @@
             </div>
             <div style="background: #f7fafc; padding: 16px; border-radius: 8px;">
                 <h4 style="margin-bottom: 8px; color: #2d3748;">Estimated Total</h4>
-                <p>
-                    @if($booking->estimated_total !== null)
-                        ₹{{ number_format((float) $booking->estimated_total, 2) }}
-                    @else
-                        N/A
+                @if($booking->estimated_total !== null)
+                    <p style="font-size: 22px; font-weight: 700; color: #2d3748; margin: 0;">
+                        €{{ number_format((float) $booking->estimated_total, 2) }}
+                    </p>
+                    @php
+                        $mealsRows = $booking->meals_data ?? [];
+                        $hasSupplements = collect($mealsRows)->contains(fn($m) => !empty($m['supplements_selected']));
+                    @endphp
+                    @if($hasSupplements)
+                        <p style="font-size: 12px; color: #718096; margin-top: 4px;">
+                            Includes meal price + supplement surcharges
+                        </p>
                     @endif
-                </p>
+                @else
+                    <p style="color: #718096;">N/A</p>
+                @endif
             </div>
         </div>
 
@@ -135,6 +219,7 @@
                             <tr style="text-align: left; background: #edf2f7;">
                                 <th style="padding: 10px;">Name</th>
                                 <th style="padding: 10px;">Country</th>
+                                <th style="padding: 10px;">Email</th>
                                 <th style="padding: 10px;">Phone</th>
                             </tr>
                         </thead>
@@ -143,6 +228,15 @@
                                 <tr style="border-bottom: 1px solid #e2e8f0;">
                                     <td style="padding: 10px;">{{ $guest['name'] ?? 'N/A' }}</td>
                                     <td style="padding: 10px;">{{ $guest['country'] ?? 'N/A' }}</td>
+                                    <td style="padding: 10px;">
+                                        @if(!empty($guest['email']))
+                                            <a href="mailto:{{ $guest['email'] }}" style="color: #2b6cb0; text-decoration: none;">
+                                                {{ $guest['email'] }}
+                                            </a>
+                                        @else
+                                            <span style="color: #718096;">—</span>
+                                        @endif
+                                    </td>
                                     <td style="padding: 10px;">{{ $guest['phone'] ?? '—' }}</td>
                                 </tr>
                             @endforeach

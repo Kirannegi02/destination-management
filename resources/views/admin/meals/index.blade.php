@@ -18,6 +18,41 @@
         .status-tab--inactive {
             color: #4a5568;
         }
+        /* Bootstrap-4 pagination (no Tailwind in admin layout — default tailwind.blade.php SVGs render huge) */
+        .pagination {
+            display: flex;
+            gap: 6px;
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .pagination .page-item .page-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+            color: #2d3748;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .pagination .page-item.active .page-link {
+            background: #1e3a8a;
+            color: #fff;
+            border-color: #1e3a8a;
+        }
+        .pagination .page-item.disabled .page-link {
+            opacity: .55;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
     </style>
     <div class="card">
         <div class="card-header">
@@ -31,6 +66,14 @@
                 <a href="{{ route('admin.meals.create') }}" 
                    style="padding: 8px 16px; background: #48bb78; color: white; border: none; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
                     <span>+</span> Add Meal
+                </a>
+                <a href="{{ route('admin.meals.import.form') }}"
+                   style="padding: 8px 16px; background: #4299e1; color: white; border-radius: 6px; text-decoration: none; font-size: 14px;">
+                    Bulk Import
+                </a>
+                <a href="{{ route('admin.meals.export.page') }}"
+                   style="padding: 8px 16px; background: #38b2ac; color: white; border-radius: 6px; text-decoration: none; font-size: 14px;">
+                    Bulk Export
                 </a>
                 
                 <!-- Status Tabs -->
@@ -114,8 +157,7 @@
                         <th>Restaurant</th>
                         <th>Meal Type</th>
                         <th>Menu Description</th>
-                        <th>Price (INR)</th>
-                        <th>Local Price</th>
+                        <th>Price (EUR)</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -139,15 +181,8 @@
                                 </div>
                             </td>
                             <td>
-                                @if($meal->price_inr)
-                                    <strong style="color: #48bb78;">{{ $meal->price_inr_formatted }}</strong>
-                                @else
-                                    <span style="color: #718096;">N/A</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if($meal->local_price_formatted)
-                                    <span style="color: #667eea;">{{ $meal->local_price_formatted }}</span>
+                                @if($meal->price)
+                                    <strong style="color: #48bb78;">{{ $meal->price_eur_formatted }}</strong>
                                 @else
                                     <span style="color: #718096;">N/A</span>
                                 @endif
@@ -165,17 +200,19 @@
                                        style="padding: 6px 12px; background: #4299e1; color: white; border-radius: 6px; text-decoration: none; font-size: 12px;">
                                         Edit
                                     </a>
-                                    <form action="{{ route('admin.meals.destroy', $meal->id) }}" 
-                                          method="POST" 
-                                          style="display: inline;"
-                                          onsubmit="return confirm('Are you sure you want to delete this meal? This action cannot be undone.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                                style="padding: 6px 12px; background: #e53e3e; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                                            Delete
-                                        </button>
-                                    </form>
+                                    @if(!$meal->is_shared_template)
+                                        <form action="{{ route('admin.meals.destroy', $meal->id) }}" 
+                                              method="POST" 
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Are you sure you want to delete this meal? This action cannot be undone.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" 
+                                                    style="padding: 6px 12px; background: #e53e3e; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -183,8 +220,11 @@
                 </tbody>
             </table>
 
-            <div style="margin-top: 20px; display: flex; justify-content: center;">
-                {{ $meals->appends(request()->query())->links() }}
+            <div style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <p style="font-size: 14px; color: #4a5568; margin: 0;">
+                    Showing {{ $meals->firstItem() }} to {{ $meals->lastItem() }} of {{ $meals->total() }} results
+                </p>
+                {{ $meals->appends(request()->query())->links('pagination::bootstrap-4') }}
             </div>
         @else
             <div class="empty-state">

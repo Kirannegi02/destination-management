@@ -13,8 +13,9 @@ class Booking extends Model
         'user_id',
         'restaurant_id',
         'meal_id',
+        'meals_data',   // JSON: multi-meal bookings [{meal_id, meal_type, meal_type_label, price_per_person, guests, subtotal}]
         'meal_type',
-        'meal_price_inr',
+        'meal_price',
         'booking_date',
         'booking_time',
         'guests',
@@ -30,8 +31,9 @@ class Booking extends Model
         'booking_date' => 'date',
         'guests' => 'integer',
         'guests_details' => 'array',
+        'meals_data' => 'array',
         'estimated_total' => 'decimal:2',
-        'meal_price_inr' => 'decimal:2',
+        'meal_price' => 'decimal:2',
     ];
 
     /**

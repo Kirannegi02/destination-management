@@ -42,4 +42,9 @@ class Vehicle extends Model
     {
         return $this->hasMany(Transport::class);
     }
+
+    public function transportZonesPricing()
+    {
+        return $this->hasMany(Transport::class)->whereNotNull('transport_zone_id');
+    }
 }

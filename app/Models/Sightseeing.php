@@ -16,14 +16,26 @@ class Sightseeing extends Model
         'city',
         'start_location',
         'end_location',
+        'standard_price',
+        'currency',
+        'default_pax',
+        'standard_price_note',
+        'availability_notes',
+        'booking_conditions',
+        'detail_page_note',
         'image',
+        'requires_date',
+        'requires_pax',
         'is_featured',
+        'display_order',
         'status',
         'created_by',
     ];
 
     protected $casts = [
-        'is_featured' => 'boolean',
+        'is_featured'      => 'boolean',
+        'requires_date'    => 'boolean',
+        'requires_pax'     => 'boolean',
     ];
 
     public function options()

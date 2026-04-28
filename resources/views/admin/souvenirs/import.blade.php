@@ -9,7 +9,7 @@
             <div>
                 <h2 class="card-title">Upload File</h2>
                 <p style="color: #718096; font-size: 14px; margin-top: 4px;">
-                    Supported formats: CSV, XLS, XLSX. Use the sample to match columns. Images are not included in import; add or edit souvenirs to attach multiple images.
+                    Supported formats: CSV, XLS, XLSX. Use the sample to match columns. You can include image URLs in the <strong>image_urls</strong> column (comma-separated for multiple images).
                 </p>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -51,7 +51,8 @@
             <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
                 <h3 style="margin-bottom: 10px; color: #2d3748;">Template & columns</h3>
                 <p style="color: #4a5568; font-size: 14px; margin-bottom: 10px;">
-                    Required: <strong>name</strong>, <strong>price</strong>, <strong>status</strong> (active, inactive, pending). Add images via Add/Edit Souvenir after import.
+                    Required: <strong>name</strong>, <strong>price</strong>, <strong>status</strong> (active/inactive/pending).<br>
+                    For images, paste comma-separated URLs in the <strong>image_urls</strong> column.
                 </p>
                 <div style="display: grid; gap: 6px; color: #2d3748; font-size: 14px;">
                     @foreach($columns as $column)

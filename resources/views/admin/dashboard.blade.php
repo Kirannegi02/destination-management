@@ -183,9 +183,9 @@
                                 <td>{{ $guide->city ?? 'N/A' }}</td>
                                 <td>
                                     @if($guide->half_day_price !== null && $guide->half_day_price !== '')
-                                        HD ₹{{ number_format((float) $guide->half_day_price, 2) }}
+                                        HD €{{ number_format((float) $guide->half_day_price, 2) }}
                                         @if($guide->full_day_price !== null && $guide->full_day_price !== '')
-                                            <br>FD ₹{{ number_format((float) $guide->full_day_price, 2) }}
+                                            <br>FD €{{ number_format((float) $guide->full_day_price, 2) }}
                                         @endif
                                     @else
                                         N/A
@@ -291,7 +291,7 @@
                                 <td>{{ $s->city ?? 'N/A' }}</td>
                                 <td>
                                     @if($s->standard_price !== null && $s->standard_price !== '')
-                                        ₹{{ number_format((float) $s->standard_price, 2) }}
+                                        €{{ number_format((float) $s->standard_price, 2) }}
                                     @else
                                         N/A
                                     @endif
@@ -347,7 +347,7 @@
                                 <td>{{ $t->location ?? 'N/A' }}</td>
                                 <td>
                                     @if($t->price_per_km !== null && $t->price_per_km !== '')
-                                        ₹{{ number_format((float) $t->price_per_km, 2) }}
+                                        €{{ number_format((float) $t->price_per_km, 2) }}
                                     @else
                                         N/A
                                     @endif
@@ -403,7 +403,7 @@
                                 <td>{{ $sv->city ?? $sv->country ?? 'N/A' }}</td>
                                 <td>
                                     @if($sv->price !== null && $sv->price !== '')
-                                        ₹{{ number_format((float) $sv->price, 2) }}
+                                        €{{ number_format((float) $sv->price, 2) }}
                                     @else
                                         N/A
                                     @endif

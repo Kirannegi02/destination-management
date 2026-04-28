@@ -411,7 +411,7 @@ class GuideBookingController extends Controller
             'status' => 'pending',
             'special_requests' => $validated['special_requests'] ?? null,
             'price' => $price,
-            'currency' => $package?->currency ?? 'INR',
+            'currency' => $package?->currency ?? 'EUR',
             'estimated_total' => $price,
             'contact_name' => $validated['contact_name'] ?? $user->name,
             'contact_phone' => $validated['contact_phone'] ?? $user->phone,

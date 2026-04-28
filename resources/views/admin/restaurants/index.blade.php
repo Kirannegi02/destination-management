@@ -18,6 +18,38 @@
         .status-tab--inactive {
             color: #4a5568;
         }
+        .pagination {
+            display: flex;
+            gap: 6px;
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+            align-items: center;
+        }
+        .pagination .page-item .page-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+            color: #2d3748;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .pagination .page-item.active .page-link {
+            background: #1e3a8a;
+            color: #fff;
+            border-color: #1e3a8a;
+        }
+        .pagination .page-item.disabled .page-link {
+            opacity: .55;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
     </style>
     @php
         $exportFilters = array_filter([
@@ -242,7 +274,7 @@
             </table>
 
             <div style="margin-top: 20px; display: flex; justify-content: center;">
-                {{ $restaurants->appends(request()->query())->links() }}
+                {{ $restaurants->appends(request()->query())->links('pagination::bootstrap-4') }}
             </div>
         @else
             <div class="empty-state">

@@ -51,14 +51,17 @@ class Guide extends Model
         'display_on_website',
         'featured_guide',
         'created_by',
+        'half_day_price',
+        'full_day_price',
+        'extra_hour_price',
     ];
 
     protected $casts = [
         'date_of_birth' => 'date',
         'available_from_date' => 'date',
         'available_to_date' => 'date',
-        'daily_start_time' => 'datetime:H:i',
-        'daily_end_time' => 'datetime:H:i',
+        'daily_start_time' => 'string',
+        'daily_end_time' => 'string',
         'other_languages' => 'array',
         'available_days' => 'array',
         'indian_language_support' => 'array',

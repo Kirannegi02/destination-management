@@ -60,20 +60,33 @@
                         @enderror
                     </div>
 
+                    @php
+                        $mtOld = old('meal_type');
+                        $mtInList = $mtOld !== null && $mtOld !== '' && array_key_exists($mtOld, $mealTypeOptions);
+                        $customDisplay = old('meal_type_custom', ($mtOld !== null && $mtOld !== '' && ! $mtInList) ? \App\Models\Meal::labelForMealTypeKey((string) $mtOld) : '');
+                    @endphp
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
                             Meal Type <span style="color: #e53e3e;">*</span>
                         </label>
-                        <select name="meal_type" 
-                                required
-                                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                            <option value="">Select Meal Type</option>
-                            @foreach($mealTypes as $key => $label)
-                                <option value="{{ $key }}" {{ old('meal_type') == $key ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
+                        <input type="hidden" name="meal_type" id="meal_type_value" value="{{ $mtOld ?? '' }}">
+                        <select id="meal_type_select"
+                                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: #fff;">
+                            <option value="">— Select meal type —</option>
+                            @foreach($mealTypeOptions as $key => $label)
+                                <option value="{{ $key }}" {{ $mtInList && (string) $mtOld === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
+                            <option value="__custom__" {{ $mtOld !== null && $mtOld !== '' && ! $mtInList ? 'selected' : '' }}>Other (custom type)…</option>
                         </select>
+                        <input type="text"
+                               id="meal_type_custom"
+                               value="{{ $customDisplay }}"
+                               placeholder="e.g. Sunday Brunch, Corporate package"
+                               autocomplete="off"
+                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; margin-top: 8px; {{ $mtOld !== null && $mtOld !== '' && ! $mtInList ? '' : 'display: none;' }}">
+                        <p style="font-size: 12px; color: #718096; margin-top: 6px; margin-bottom: 0;">
+                            Standard Lunch/Dinner and Cocktail lines are created from <strong>Global menu</strong> — use another option here for extra offerings (e.g. premium buffets), or <strong>Other</strong> for a new type.
+                        </p>
                         @error('meal_type')
                             <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
                         @enderror
@@ -97,16 +110,16 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                            Price (INR)
+                            Price (EUR)
                         </label>
                         <input type="number" 
-                               name="price_inr" 
-                               value="{{ old('price_inr') }}"
+                               name="price" 
+                               value="{{ old('price') }}"
                                step="0.01"
                                min="0"
                                placeholder="e.g., 1800"
                                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                        @error('price_inr')
+                        @error('price')
                             <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
                         @enderror
                     </div>
@@ -115,7 +128,7 @@
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
                             Currency
                         </label>
-                        <input type="text" value="INR" disabled
+                        <input type="text" value="EUR" disabled
                                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background-color:#edf2f7;">
                     </div>
                 </div>
@@ -168,14 +181,14 @@
                                        name="supplements[starter][available]" 
                                        value="1"
                                        {{ old('supplements.starter.available') ? 'checked' : '' }}
-                                       onchange="document.getElementById('starter_price').disabled = !this.checked;">
+                                       onchange="var on=this.checked; document.getElementById('starter_price').disabled=!on; document.getElementById('starter_description').disabled=!on;">
                                 <span>Available</span>
                             </label>
                         </div>
                         
                         <div class="form-group">
                             <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                                Price (INR)
+                                Price (EUR)
                             </label>
                             <input type="number" 
                                    id="starter_price"
@@ -186,6 +199,20 @@
                                    {{ old('supplements.starter.available') ? '' : 'disabled' }}
                                    placeholder="e.g., 200"
                                    style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group" style="margin-top: 12px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
+                                Food items to include (supplement)
+                            </label>
+                            <textarea id="starter_description"
+                                      name="supplements[starter][description]"
+                                      rows="3"
+                                      placeholder="e.g., Soup of the day, 2 pcs veg starter, green salad"
+                                      {{ old('supplements.starter.available') ? '' : 'disabled' }}
+                                      style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical;">{{ old('supplements.starter.description') }}</textarea>
+                            @error('supplements.starter.description')
+                                <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
 
@@ -199,14 +226,14 @@
                                        name="supplements[main_course][available]" 
                                        value="1"
                                        {{ old('supplements.main_course.available') ? 'checked' : '' }}
-                                       onchange="document.getElementById('main_course_price').disabled = !this.checked;">
+                                       onchange="var on=this.checked; document.getElementById('main_course_price').disabled=!on; document.getElementById('main_course_description').disabled=!on;">
                                 <span>Available</span>
                             </label>
                         </div>
                         
                         <div class="form-group">
                             <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                                Price (INR)
+                                Price (EUR)
                             </label>
                             <input type="number" 
                                    id="main_course_price"
@@ -217,6 +244,20 @@
                                    {{ old('supplements.main_course.available') ? '' : 'disabled' }}
                                    placeholder="e.g., 300"
                                    style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group" style="margin-top: 12px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
+                                Food items to include (supplement)
+                            </label>
+                            <textarea id="main_course_description"
+                                      name="supplements[main_course][description]"
+                                      rows="3"
+                                      placeholder="e.g., Extra main: 1 paneer dish + 1 chicken dish, bread basket"
+                                      {{ old('supplements.main_course.available') ? '' : 'disabled' }}
+                                      style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical;">{{ old('supplements.main_course.description') }}</textarea>
+                            @error('supplements.main_course.description')
+                                <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                 </div>
@@ -236,5 +277,44 @@
         </form>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var sel = document.getElementById('meal_type_select');
+    var custom = document.getElementById('meal_type_custom');
+    var hidden = document.getElementById('meal_type_value');
+    if (!sel || !custom || !hidden) return;
+    var form = sel.closest('form');
+
+    function sync() {
+        if (!sel.value) {
+            hidden.value = '';
+            return;
+        }
+        if (sel.value === '__custom__') {
+            hidden.value = (custom.value || '').trim();
+        } else {
+            hidden.value = sel.value;
+        }
+    }
+
+    sel.addEventListener('change', function () {
+        custom.style.display = sel.value === '__custom__' ? 'block' : 'none';
+        if (sel.value !== '__custom__') custom.value = '';
+        sync();
+    });
+    custom.addEventListener('input', sync);
+    form.addEventListener('submit', function (e) {
+        sync();
+        if (!hidden.value.trim()) {
+            e.preventDefault();
+            alert('Please select a meal type or enter a custom type under Other.');
+        }
+    });
+    sync();
+})();
+</script>
+@endpush
 
 

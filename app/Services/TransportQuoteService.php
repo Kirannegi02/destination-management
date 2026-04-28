@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Transport;
 use App\Models\TransportBooking;
+use App\Models\TransportZone;
 use App\Models\Vehicle;
 
 class TransportQuoteService
@@ -25,19 +26,76 @@ class TransportQuoteService
     }
 
     /**
-     * Find transport (pricing) for a vehicle and city/location.
-     * Matches by vehicle_id and location containing the city name or exact match.
+     * Find transport (pricing) for a vehicle. When $zoneId is set (from booking UI), use that zone;
+     * else match by city name against zone cities or legacy location rows.
      */
-    public function getTransportForCity(int $vehicleId, string $city): ?Transport
+    public function getTransportForCity(int $vehicleId, string $city, ?int $zoneId = null): ?Transport
     {
         $city = trim($city);
-        return Transport::where('vehicle_id', $vehicleId)
+
+        if ($zoneId !== null && $zoneId > 0) {
+            $explicit = TransportZone::query()->where('id', $zoneId)->where('status', 'active')->first();
+            if ($explicit) {
+                $byZone = Transport::with('zone')
+                    ->where('vehicle_id', $vehicleId)
+                    ->where('transport_zone_id', $explicit->id)
+                    ->where('status', 'active')
+                    ->first();
+                if ($byZone) {
+                    return $byZone;
+                }
+            }
+        }
+
+        $zone = TransportZone::findActiveForCity($city);
+        if ($zone) {
+            $byZone = Transport::with('zone')
+                ->where('vehicle_id', $vehicleId)
+                ->where('transport_zone_id', $zone->id)
+                ->where('status', 'active')
+                ->first();
+            if ($byZone) {
+                return $byZone;
+            }
+        }
+
+        return Transport::with('zone')
+            ->where('vehicle_id', $vehicleId)
+            ->whereNull('transport_zone_id')
             ->where('status', 'active')
             ->where(function ($q) use ($city) {
                 $q->where('location', $city)
                     ->orWhere('location', 'like', '%' . $city . '%');
             })
             ->first();
+    }
+
+    /**
+     * Daily disposal amount: zone-level when set, else legacy column on transport row.
+     */
+    protected function pricePerDayAmount(?Transport $transport): float
+    {
+        if (!$transport) {
+            return 0.0;
+        }
+        $zone = $transport->relationLoaded('zone') ? $transport->zone : $transport->zone()->first();
+        if ($zone && $zone->price_per_day !== null) {
+            return (float) $zone->price_per_day;
+        }
+        return $transport->price_per_day !== null ? (float) $transport->price_per_day : 0.0;
+    }
+
+    protected function currencyForTransport(?Transport $transport, string $fallback): string
+    {
+        if ($transport?->currency) {
+            return (string) $transport->currency;
+        }
+        $zone = $transport?->relationLoaded('zone') ? $transport->zone : $transport?->zone()->first();
+        if ($zone?->currency) {
+            return (string) $zone->currency;
+        }
+
+        return $fallback;
     }
 
     /**
@@ -64,13 +122,43 @@ class TransportQuoteService
         $legs = $input['legs'] ?? [];
 
         $cities = array_values(array_map('trim', (array) $cities));
+        $zoneImports = $input['zone_ids'] ?? [];
+        if (!is_array($zoneImports)) {
+            $zoneImports = [];
+        }
         $daysPerCity = array_map('intval', (array) $daysPerCity);
         $legsByTrain = array_map(function ($v) {
             return filter_var($v, FILTER_VALIDATE_BOOLEAN);
         }, (array) $legsByTrain);
         $legs = array_values((array) $legs);
 
-        $vehicle = $this->getVehicleForPassengers($passengers);
+        $vehicle = null;
+        if (!empty($input['vehicle_id'])) {
+            $vehicle = Vehicle::where('status', 'active')->find((int) $input['vehicle_id']);
+            if (!$vehicle) {
+                return [
+                    'success' => false,
+                    'message' => 'Selected vehicle is not available.',
+                    'line_items' => [],
+                    'total_amount' => null,
+                    'currency' => null,
+                    'vehicle' => null,
+                ];
+            }
+            if ((int) $vehicle->capacity_seats < $passengers) {
+                return [
+                    'success' => false,
+                    'message' => 'Selected vehicle does not have enough seats for the passenger count.',
+                    'line_items' => [],
+                    'total_amount' => null,
+                    'currency' => null,
+                    'vehicle' => $this->formatVehicle($vehicle),
+                ];
+            }
+        } else {
+            $vehicle = $this->getVehicleForPassengers($passengers);
+        }
+
         if (!$vehicle) {
             return [
                 'success' => false,
@@ -85,7 +173,7 @@ class TransportQuoteService
         $vehicleId = $vehicle->id;
         $lineItems = [];
         $total = 0.0;
-        $currency = 'INR';
+        $currency = 'EUR';
 
         // Normalize return: A → B → A (cities = [A, B, A], days_per_city = [d1, d2, 0])
         if ($tripType === TransportBooking::TRIP_TYPE_RETURN && count($cities) === 2) {
@@ -115,10 +203,16 @@ class TransportQuoteService
         // Day-by-day: first city full days, then each leg (transfer day consumes 1 day of next city), then remaining days in each next city.
         for ($i = 0; $i < $numCities; $i++) {
             $city = $cities[$i];
-            $transport = $this->getTransportForCity($vehicleId, $city);
-            $pricePerDay = $transport ? (float) $transport->price_per_day : 0;
-            $cityCurrency = $transport && $transport->currency ? $transport->currency : $currency;
-            if ($currency === 'INR' && $cityCurrency !== 'INR') {
+            $zoneIdForStop = isset($zoneImports[$i]) && $zoneImports[$i] !== null && $zoneImports[$i] !== ''
+                ? (int) $zoneImports[$i]
+                : null;
+            if ($zoneIdForStop !== null && $zoneIdForStop <= 0) {
+                $zoneIdForStop = null;
+            }
+            $transport = $this->getTransportForCity($vehicleId, $city, $zoneIdForStop);
+            $pricePerDay = $this->pricePerDayAmount($transport);
+            $cityCurrency = $this->currencyForTransport($transport, $currency);
+            if ($currency === 'EUR' && $cityCurrency !== 'EUR') {
                 $currency = $cityCurrency;
             }
 
@@ -144,7 +238,13 @@ class TransportQuoteService
                 $to = $cities[$i + 1];
                 $byTrain = isset($legsByTrain[$i]) && $legsByTrain[$i];
                 $transportFrom = $transport;
-                $transportTo = $this->getTransportForCity($vehicleId, $to);
+                $zoneIdTo = isset($zoneImports[$i + 1]) && $zoneImports[$i + 1] !== null && $zoneImports[$i + 1] !== ''
+                    ? (int) $zoneImports[$i + 1]
+                    : null;
+                if ($zoneIdTo !== null && $zoneIdTo <= 0) {
+                    $zoneIdTo = null;
+                }
+                $transportTo = $this->getTransportForCity($vehicleId, $to, $zoneIdTo);
                 $dayIndex++;
 
                 if ($byTrain) {
@@ -177,7 +277,7 @@ class TransportQuoteService
                         }
                     }
 
-                    $pricePerDayTo = $transportTo ? (float) $transportTo->price_per_day : 0;
+                    $pricePerDayTo = $this->pricePerDayAmount($transportTo);
                     $chargeForDay += $pricePerDayTo;
                     $desc = count($descriptions) > 0 ? implode(' + ', $descriptions) . ' + Full day ' . $to : 'Full day in ' . $to;
                     $lineItems[] = [
@@ -186,7 +286,7 @@ class TransportQuoteService
                         'description' => $desc,
                         'vehicle_display' => $vehicle->name,
                         'amount' => round($chargeForDay, 2),
-                        'currency' => $transportTo && $transportTo->currency ? $transportTo->currency : $currency,
+                        'currency' => $this->currencyForTransport($transportTo, $currency),
                     ];
                     $total += $chargeForDay;
                 } else {

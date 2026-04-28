@@ -64,9 +64,12 @@
                     </div>
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Currency</label>
-                        <input type="text" value="INR" disabled
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background-color:#edf2f7;">
-                        <input type="hidden" name="currency" value="INR">
+                        <select name="currency" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                            @foreach(['EUR','CHF','USD','GBP','INR'] as $cur)
+                                <option value="{{ $cur }}" {{ old('currency', $souvenir->currency) === $cur ? 'selected' : '' }}>{{ $cur }}</option>
+                            @endforeach
+                        </select>
+                        @error('currency')<div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>@enderror
                     </div>
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">Min order quantity</label>
@@ -150,8 +153,12 @@
         </form>
     </div>
 
+    @push('styles')
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    @endpush
+
     @push('scripts')
-        <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
         <script>
             (function () {
                 const mapElement = document.getElementById('souvenir-map-edit');
@@ -160,32 +167,42 @@
                 const latInput = document.getElementById('latitude');
                 const lngInput = document.getElementById('longitude');
 
-                const defaultLat = parseFloat(latInput.value) || 30.3165; // Dehradun default
+                const defaultLat = parseFloat(latInput.value) || 30.3165;
                 const defaultLng = parseFloat(lngInput.value) || 78.0322;
 
-                const map = new google.maps.Map(mapElement, {
-                    center: { lat: defaultLat, lng: defaultLng },
-                    zoom: 8,
-                });
+                const map = L.map(mapElement).setView([defaultLat, defaultLng], 8);
 
-                let marker = new google.maps.Marker({
-                    position: { lat: defaultLat, lng: defaultLng },
-                    map: map,
-                    draggable: true,
-                });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
 
-                function updateInputs(latLng) {
-                    latInput.value = latLng.lat().toFixed(8);
-                    lngInput.value = latLng.lng().toFixed(8);
+                let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+                function updateInputs(lat, lng) {
+                    latInput.value = lat.toFixed(8);
+                    lngInput.value = lng.toFixed(8);
                 }
 
-                map.addListener('click', function (e) {
-                    marker.setPosition(e.latLng);
-                    updateInputs(e.latLng);
+                map.on('click', function (e) {
+                    marker.setLatLng(e.latlng);
+                    updateInputs(e.latlng.lat, e.latlng.lng);
                 });
 
-                marker.addListener('dragend', function (e) {
-                    updateInputs(e.latLng);
+                marker.on('dragend', function () {
+                    const pos = marker.getLatLng();
+                    updateInputs(pos.lat, pos.lng);
+                });
+
+                // Keep inputs in sync when typed manually
+                [latInput, lngInput].forEach(function (input) {
+                    input.addEventListener('change', function () {
+                        const lat = parseFloat(latInput.value);
+                        const lng = parseFloat(lngInput.value);
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            marker.setLatLng([lat, lng]);
+                            map.setView([lat, lng]);
+                        }
+                    });
                 });
             })();
         </script>

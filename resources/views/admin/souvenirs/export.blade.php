@@ -9,7 +9,7 @@
             <div>
                 <h2 class="card-title">Export Souvenirs</h2>
                 <p style="color: #718096; font-size: 14px; margin-top: 4px;">
-                    Download souvenir data as XLS or CSV. Column names match the import template. Images are not exported; use Add/Edit to manage multiple images per souvenir.
+                    Download souvenir data as XLS or CSV. Column names match the import template. Image URLs are exported in the <strong>image_urls</strong> column (comma-separated) and can be re-imported.
                 </p>
             </div>
         </div>

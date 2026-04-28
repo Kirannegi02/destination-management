@@ -10,6 +10,7 @@ class Transport extends Model
     use HasFactory;
 
     protected $fillable = [
+        'transport_zone_id',
         'location',
         'vehicle_id',
         'price_per_km',
@@ -35,5 +36,10 @@ class Transport extends Model
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(TransportZone::class, 'transport_zone_id');
     }
 }

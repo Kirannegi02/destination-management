@@ -1,3 +1,15 @@
+# ── Whitelist API query parameters that Hostinger WAF may falsely flag ────────
+<IfModule mod_security2.c>
+    # Whitelist restaurant_id and similar ID params on the /api/meals route
+    <LocationMatch "^/api/meals">
+        SecRuleRemoveByTag "OWASP_CRS"
+        SecRuleRemoveById 942100 942110 942120 942130 942140 942150 942160
+        SecRuleRemoveById 942200 942210 942220 942230 942240 942250 942260
+        SecRuleRemoveById 920272 920273 920274
+    </LocationMatch>
+</IfModule>
+# ─────────────────────────────────────────────────────────────────────────────
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

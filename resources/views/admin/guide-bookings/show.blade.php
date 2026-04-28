@@ -109,7 +109,7 @@
             <p style="color:#4a5568;">
                 <strong>Price</strong>
                 @if($booking->price !== null)
-                    {{ $booking->currency ?? 'INR' }} {{ number_format((float)$booking->price, 2) }}
+                    {{ $booking->currency ?? 'EUR' }} {{ number_format((float)$booking->price, 2) }}
                 @else
                     —
                 @endif
@@ -117,7 +117,7 @@
             <p style="color:#4a5568;">
                 <strong>Estimated total</strong>
                 @if($booking->estimated_total !== null)
-                    {{ $booking->currency ?? 'INR' }} {{ number_format((float)$booking->estimated_total, 2) }}
+                    {{ $booking->currency ?? 'EUR' }} {{ number_format((float)$booking->estimated_total, 2) }}
                 @else
                     —
                 @endif

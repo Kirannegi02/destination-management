@@ -15,7 +15,23 @@
 
         <div style="padding:20px; display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:20px;">
             <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
-                <h4 style="margin-bottom:8px; color:#2d3748;">Location</h4>
+                <h4 style="margin-bottom:8px; color:#2d3748;">Zone</h4>
+                <p style="color:#4a5568;">
+                    @if($transport->zone)
+                        <strong>{{ $transport->zone->name }}</strong>
+                        <span style="display:block; font-size:13px; margin-top:6px;">Cities: {{ implode(', ', $transport->zone->cities ?? []) }}</span>
+                        @if($transport->zone->price_per_day !== null && $transport->zone->price_per_day !== '')
+                            <span style="display:block; font-size:13px; margin-top:6px;">
+                                Zone price per day: <strong>{{ number_format((float) $transport->zone->price_per_day, 2) }} {{ $transport->zone->currency ?? '' }}</strong>
+                            </span>
+                        @endif
+                    @else
+                        <span>—</span>
+                    @endif
+                </p>
+            </div>
+            <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
+                <h4 style="margin-bottom:8px; color:#2d3748;">Location label</h4>
                 <p style="color:#4a5568;"><strong>{{ $transport->location ?? '—' }}</strong></p>
             </div>
             <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
@@ -26,9 +42,21 @@
                 @endif
             </div>
             <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
-                <h4 style="margin-bottom:8px; color:#2d3748;">Pricing</h4>
-                <p style="color:#4a5568;">Price per day: <strong>{{ $transport->price_per_day ? number_format($transport->price_per_day, 2) . ' ' . ($transport->currency ?? '') : '—' }}</strong></p>
-                <p style="color:#4a5568;">Currency: <strong>{{ $transport->currency ?? '—' }}</strong></p>
+                <h4 style="margin-bottom:8px; color:#2d3748;">Daily hire (zone vs row)</h4>
+                <p style="color:#4a5568;">
+                    Zone daily rate (used for quotes when set):
+                    <strong>
+                        @if($transport->zone && ($transport->zone->price_per_day !== null && $transport->zone->price_per_day !== ''))
+                            {{ number_format((float) $transport->zone->price_per_day, 2) }} {{ $transport->zone->currency ?? '' }}
+                        @else
+                            —
+                        @endif
+                    </strong>
+                </p>
+                <p style="color:#4a5568; font-size:13px;">
+                    Row fallback (legacy):
+                    <strong>{{ $transport->price_per_day ? number_format($transport->price_per_day, 2) . ' ' . ($transport->currency ?? '') : '—' }}</strong>
+                </p>
             </div>
             <div style="background:#f7fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
                 <h4 style="margin-bottom:8px; color:#2d3748;">Distance-based (between cities)</h4>

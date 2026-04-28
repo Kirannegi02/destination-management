@@ -60,7 +60,7 @@
                     @enderror
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div class="form-group">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
                             Star Rating
@@ -75,22 +75,6 @@
                             @endfor
                         </select>
                         @error('star_rating')
-                            <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
-                            Price
-                        </label>
-                        <input type="number" 
-                               name="price" 
-                               value="{{ old('price') }}"
-                               step="0.01"
-                               min="0"
-                               placeholder="Enter average price"
-                               style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
-                        @error('price')
                             <div style="color: #e53e3e; font-size: 12px; margin-top: 4px;">{{ $message }}</div>
                         @enderror
                     </div>

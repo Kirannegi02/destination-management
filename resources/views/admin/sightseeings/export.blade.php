@@ -24,8 +24,3 @@
         </div>
     </div>
 @endsection
-
-<!-- in below api
-{{local_url}}/api/restaurants?search=Italian&status=ac
-
-add number of rooms, locatrion in search api  -->
