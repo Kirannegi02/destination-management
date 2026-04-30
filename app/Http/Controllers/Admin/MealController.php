@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Meal;
 use App\Models\Restaurant;
 use App\Services\GlobalMealSyncService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class MealController extends Controller
@@ -140,8 +142,8 @@ class MealController extends Controller
             }
 
             $typeKey = $this->resolveImportedMealType($assoc['meal_type'] ?? null);
-            if ($typeKey === null || ! array_key_exists($typeKey, Meal::getMealTypes())) {
-                $errors[] = "Row {$rowNumber}: invalid meal_type.";
+            if ($typeKey === null) {
+                $errors[] = "Row {$rowNumber}: meal_type is required.";
                 $skipped++;
                 continue;
             }
@@ -179,7 +181,25 @@ class MealController extends Controller
                 if ($priceEur !== null) {
                     $payload['price'] = $priceEur;
                 }
-                $sync->applyTemplateToRestaurantMeal($restaurant, $typeKey, $payload);
+                try {
+                    $sync->applyTemplateToRestaurantMeal($restaurant, $typeKey, $payload);
+                } catch (QueryException $e) {
+                    $dbMessage = $e->getMessage();
+                    Log::warning('[Meal import] Row skipped: database error while syncing global template', [
+                        'row_number' => $rowNumber,
+                        'restaurant_id' => $restaurant->id,
+                        'meal_type' => $typeKey,
+                        'error' => $dbMessage,
+                    ]);
+
+                    if (stripos($dbMessage, 'Data truncated for column \'meal_type\'') !== false) {
+                        $errors[] = "Row {$rowNumber}: custom meal_type storage is blocked by DB schema (meals.meal_type is ENUM). Run migration 2026_04_18_120000_change_meals_meal_type_to_varchar and retry.";
+                    } else {
+                        $errors[] = "Row {$rowNumber}: database error while importing meal ({$typeKey}).";
+                    }
+                    $skipped++;
+                    continue;
+                }
                 if ($existed) {
                     $updated++;
                 } else {
@@ -222,20 +242,38 @@ class MealController extends Controller
                 continue;
             }
 
-            $meal = Meal::updateOrCreate(
-                [
+            try {
+                $meal = Meal::updateOrCreate(
+                    [
+                        'restaurant_id' => $restaurant->id,
+                        'meal_type' => $typeKey,
+                    ],
+                    [
+                        'menu_description' => $menuDescription,
+                        'price' => $priceEur,
+                        'supplements' => $supplements,
+                        'status' => $status,
+                        'display_order' => $displayOrder,
+                        'is_shared_template' => false,
+                    ]
+                );
+            } catch (QueryException $e) {
+                $dbMessage = $e->getMessage();
+                Log::warning('[Meal import] Row skipped: database error during updateOrCreate', [
+                    'row_number' => $rowNumber,
                     'restaurant_id' => $restaurant->id,
                     'meal_type' => $typeKey,
-                ],
-                [
-                    'menu_description' => $menuDescription,
-                'price' => $priceEur,
-                'supplements' => $supplements,
-                'status' => $status,
-                'display_order' => $displayOrder,
-                'is_shared_template' => false,
-                ]
-            );
+                    'error' => $dbMessage,
+                ]);
+
+                if (stripos($dbMessage, 'Data truncated for column \'meal_type\'') !== false) {
+                    $errors[] = "Row {$rowNumber}: meal_type '{$typeKey}' cannot be saved because DB column is still ENUM. Run migration 2026_04_18_120000_change_meals_meal_type_to_varchar.";
+                } else {
+                    $errors[] = "Row {$rowNumber}: database error while importing meal_type '{$typeKey}'.";
+                }
+                $skipped++;
+                continue;
+            }
 
             if ($meal->wasRecentlyCreated) {
                 $created++;

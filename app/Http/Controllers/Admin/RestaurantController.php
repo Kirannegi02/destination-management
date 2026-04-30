@@ -597,6 +597,12 @@ class RestaurantController extends Controller
 
         $headers = $parsed['headers'];
         $rows = $parsed['data_rows'];
+        Log::info('[Restaurant import] Parsed sheet', [
+            'file' => $uploaded->getClientOriginalName(),
+            'header_row_number' => $parsed['header_row_number'],
+            'headers' => $headers,
+            'data_row_count' => count($rows),
+        ]);
 
         $required = ['restaurant_name', 'address', 'phone', 'status'];
         foreach ($required as $header) {
@@ -621,6 +627,7 @@ class RestaurantController extends Controller
         $updated = 0;
         $skipped = 0;
         $unchanged = 0;
+        $errors = [];
 
         $headerRowNumber = $parsed['header_row_number'];
 
@@ -629,11 +636,22 @@ class RestaurantController extends Controller
             $assoc = $this->mapRowToAssoc($headers, $row);
 
             if ($this->rowIsEmpty($assoc)) {
+                Log::info('[Restaurant import] Row skipped: empty row', [
+                    'row_number' => $rowNumber,
+                ]);
+                $errors[] = "Row {$rowNumber}: empty row.";
                 $skipped++;
                 continue;
             }
 
             $payload = $this->sanitizeImportPayload($assoc);
+            Log::info('[Restaurant import] Row payload prepared', [
+                'row_number' => $rowNumber,
+                'restaurant_name' => $payload['restaurant_name'] ?? null,
+                'phone_raw' => $payload['phone'] ?? null,
+                'phone_normalized' => $this->normalizeImportPhone($payload['phone'] ?? null),
+                'status' => $payload['status'] ?? null,
+            ]);
 
             $validator = Validator::make($payload, [
                 'restaurant_name' => 'required|string|max:255',
@@ -658,6 +676,13 @@ class RestaurantController extends Controller
             ]);
 
             if ($validator->fails()) {
+                Log::warning('[Restaurant import] Row skipped: validation failed', [
+                    'row_number' => $rowNumber,
+                    'errors' => $validator->errors()->toArray(),
+                    'restaurant_name' => $payload['restaurant_name'] ?? null,
+                    'phone' => $payload['phone'] ?? null,
+                ]);
+                $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());
                 $skipped++;
                 continue;
             }
@@ -671,14 +696,36 @@ class RestaurantController extends Controller
                 'restaurant_name' => $payload['restaurant_name'] ?? null,
                 'phone' => $this->normalizeImportPhone($payload['phone'] ?? null),
             ]);
+            Log::info('[Restaurant import] Match key computed', [
+                'row_number' => $rowNumber,
+                'match' => $match,
+            ]);
 
             $restaurant = Restaurant::updateOrCreate(!empty($match) ? $match : ['restaurant_name' => $payload['restaurant_name']], $payload);
 
             if ($restaurant->wasRecentlyCreated) {
+                Log::info('[Restaurant import] Row result: created', [
+                    'row_number' => $rowNumber,
+                    'restaurant_id' => $restaurant->id,
+                    'restaurant_name' => $restaurant->restaurant_name,
+                    'phone' => $restaurant->phone,
+                ]);
                 $created++;
             } elseif ($restaurant->wasChanged()) {
+                Log::info('[Restaurant import] Row result: updated', [
+                    'row_number' => $rowNumber,
+                    'restaurant_id' => $restaurant->id,
+                    'restaurant_name' => $restaurant->restaurant_name,
+                    'phone' => $restaurant->phone,
+                ]);
                 $updated++;
             } else {
+                Log::info('[Restaurant import] Row result: unchanged (already exists with same values)', [
+                    'row_number' => $rowNumber,
+                    'restaurant_id' => $restaurant->id,
+                    'restaurant_name' => $restaurant->restaurant_name,
+                    'phone' => $restaurant->phone,
+                ]);
                 $unchanged++;
             }
 
@@ -700,9 +747,16 @@ class RestaurantController extends Controller
                 if (in_array($priceCol, $headers, true)) {
                     $raw = $assoc[$priceCol] ?? null;
                     if ($raw !== null && trim((string) $raw) !== '') {
-                if (! is_numeric($raw)) {
-                        continue;
-                    }
+                        if (! is_numeric($raw)) {
+                            Log::warning('[Restaurant import] Global meal override ignored: invalid meal price', [
+                                'row_number' => $rowNumber,
+                                'meal_type' => $mealType,
+                                'column' => $priceCol,
+                                'value' => $raw,
+                            ]);
+                            $errors[] = "Row {$rowNumber}: {$priceCol} must be numeric.";
+                            continue;
+                        }
                         $overrides['price'] = (float) $raw;
                     }
                 }
@@ -718,6 +772,13 @@ class RestaurantController extends Controller
                         continue;
                     }
                     if (! is_numeric($raw)) {
+                        Log::warning('[Restaurant import] Global meal override ignored: invalid supplement price', [
+                            'row_number' => $rowNumber,
+                            'meal_type' => $mealType,
+                            'column' => $col,
+                            'value' => $raw,
+                        ]);
+                        $errors[] = "Row {$rowNumber}: {$col} must be numeric.";
                         $supplementRowInvalid = true;
                         break;
                     }
@@ -734,17 +795,31 @@ class RestaurantController extends Controller
                     continue;
                 }
 
+                Log::info('[Restaurant import] Applying global meal overrides', [
+                    'row_number' => $rowNumber,
+                    'restaurant_id' => $restaurant->id,
+                    'meal_type' => $mealType,
+                    'overrides' => $overrides,
+                ]);
                 $sync->applyTemplateToRestaurantMeal($restaurant, $mealType, $overrides);
             }
         }
 
         $message = "Import completed. Created: {$created}, Updated: {$updated}, Skipped: {$skipped}, Unchanged: {$unchanged}.";
+        Log::info('[Restaurant import] Completed', [
+            'file' => $uploaded->getClientOriginalName(),
+            'created' => $created,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'unchanged' => $unchanged,
+            'errors' => $errors,
+        ]);
 
         $flash = $created > 0 || $updated > 0
             ? ['success' => 'Restaurant data imported successfully.']
             : ['error' => 'No new data imported. ' . $message];
 
-        return back()->with($flash);
+        return back()->with($flash)->with('import_errors', $errors);
     }
 
     /**

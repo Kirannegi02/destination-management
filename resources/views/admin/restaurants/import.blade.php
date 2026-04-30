@@ -51,6 +51,17 @@
                         Import Restaurants
                     </button>
                 </div>
+
+                @if(session('import_errors') && count(session('import_errors')))
+                    <div style="margin-top: 16px; background: #fffaf0; padding: 12px; border-radius: 8px; border: 1px solid #fbd38d;">
+                        <strong style="color: #c05621;">Some rows were skipped:</strong>
+                        <ul style="margin-top: 8px; color: #744210; padding-left: 20px;">
+                            @foreach(session('import_errors') as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
             </form>
 
             <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; min-width: 0;">

@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guide;
+use App\Services\ImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
@@ -160,10 +160,7 @@ class GuideController extends Controller
 
     private function transformGuide(Guide $guide, bool $includeNotes = false): array
     {
-        $profilePhotoUrl = null;
-        if ($guide->profile_photo) {
-            $profilePhotoUrl = url('storage/app/public/' . ltrim($guide->profile_photo, '/'));
-        }
+        $profilePhotoUrl = ImageService::getUrl($guide->profile_photo);
 
         return [
             'id' => $guide->id,
@@ -181,8 +178,8 @@ class GuideController extends Controller
                 'from' => optional($guide->available_from_date)->toDateString(),
                 'to' => optional($guide->available_to_date)->toDateString(),
                 'days' => $guide->available_days,
-                'daily_start_time' => $guide->daily_start_time?->format('H:i'),
-                'daily_end_time' => $guide->daily_end_time?->format('H:i'),
+                'daily_start_time' => $guide->daily_start_time ? substr((string) $guide->daily_start_time, 0, 5) : null,
+                'daily_end_time'   => $guide->daily_end_time   ? substr((string) $guide->daily_end_time,   0, 5) : null,
             ],
             'experience' => [
                 'years' => $guide->years_experience,
@@ -207,8 +204,8 @@ class GuideController extends Controller
                     'default_end_location' => $package->default_end_location,
                     'start_point' => $package->start_point,
                     'end_point' => $package->end_point,
-                    'start_time' => $package->start_time?->format('H:i'),
-                    'end_time' => $package->end_time?->format('H:i'),
+                    'start_time' => $package->start_time ? (is_string($package->getRawOriginal('start_time')) ? substr($package->getRawOriginal('start_time'), 0, 5) : $package->start_time->format('H:i')) : null,
+                    'end_time'   => $package->end_time   ? (is_string($package->getRawOriginal('end_time'))   ? substr($package->getRawOriginal('end_time'),   0, 5) : $package->end_time->format('H:i'))   : null,
                     'notes' => $package->notes,
                     'status' => $package->status,
                 ];

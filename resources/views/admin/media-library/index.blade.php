@@ -151,16 +151,12 @@
             @foreach ($images as $item)
                 <div class="media-row">
                     <div>
-                        <img class="media-thumb" src="{{ $item['url'] }}" alt="{{ $item['filename'] }}">
+                        <img class="media-thumb" src="{{ $item['url'] }}" alt="Media image">
                         <div style="font-size:11px; color:#718096; margin-top:4px; text-align:center;">
                             {{ $item['size_kb'] }} KB
                         </div>
                     </div>
                     <div class="media-fields">
-                        <div class="field-row">
-                            <label>Filename</label>
-                            <div style="font-size:13px; color:#2d3748; word-break:break-all;">{{ $item['filename'] }}</div>
-                        </div>
                         <div class="field-row">
                             <label>Public URL — paste into <em>images</em> column in Excel</label>
                             <input type="text" readonly value="{{ $item['url'] }}" id="img-{{ $loop->index }}">
@@ -224,10 +220,6 @@
                         </div>
                     </div>
                     <div class="media-fields">
-                        <div class="field-row">
-                            <label>Filename</label>
-                            <div style="font-size:13px; color:#2d3748; word-break:break-all;">{{ $item['filename'] }}</div>
-                        </div>
                         <div class="field-row">
                             <label>Public URL — paste into <em>video</em> column in Excel or restaurant Video URL field</label>
                             <input type="text" readonly value="{{ $item['url'] }}" id="vid-{{ $loop->index }}">

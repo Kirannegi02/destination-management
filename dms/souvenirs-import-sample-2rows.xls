@@ -1,0 +1,48 @@
+<table border="1">
+  <thead>
+    <tr>
+      <td><strong>name</strong></td>
+      <td><strong>description</strong></td>
+      <td><strong>price</strong></td>
+      <td><strong>currency</strong></td>
+      <td><strong>min_order_quantity</strong></td>
+      <td><strong>city</strong></td>
+      <td><strong>latitude</strong></td>
+      <td><strong>longitude</strong></td>
+      <td><strong>stock</strong></td>
+      <td><strong>country</strong></td>
+      <td><strong>image_urls</strong></td>
+      <td><strong>status</strong></td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Swiss Chocolate Gift Box</td>
+      <td>Premium assorted Swiss milk and dark chocolates in a souvenir-ready gift package.</td>
+      <td>24.90</td>
+      <td>EUR</td>
+      <td>10</td>
+      <td>Zurich</td>
+      <td>47.3769</td>
+      <td>8.5417</td>
+      <td>120</td>
+      <td>Switzerland</td>
+      <td>https://upload.wikimedia.org/wikipedia/commons/7/70/Chocolate_%28blue_background%29.jpg,https://upload.wikimedia.org/wikipedia/commons/3/3c/Assorted_chocolates.jpg</td>
+      <td>active</td>
+    </tr>
+    <tr>
+      <td>Paris Eiffel Keychain Set</td>
+      <td>Metal Eiffel Tower keychain pack, ideal for group souvenirs and event gifting.</td>
+      <td>8.50</td>
+      <td>EUR</td>
+      <td>20</td>
+      <td>Paris</td>
+      <td>48.8566</td>
+      <td>2.3522</td>
+      <td>300</td>
+      <td>France</td>
+      <td>https://upload.wikimedia.org/wikipedia/commons/a/a8/Paris_souvenirs.jpg,https://upload.wikimedia.org/wikipedia/commons/6/65/Tour_Eiffel_Wikimedia_Commons.jpg</td>
+      <td>active</td>
+    </tr>
+  </tbody>
+</table>
