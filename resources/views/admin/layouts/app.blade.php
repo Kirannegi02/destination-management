@@ -614,21 +614,34 @@
                 </div>
 
                 @php
+                    $privateVenueMenuActive = request()->routeIs('admin.private-venues.*');
+                @endphp
+                <div class="menu-item has-submenu {{ $privateVenueMenuActive ? 'active' : '' }}"
+                     onclick="toggleSubmenu(this)" style="cursor:pointer;">
+                    🏰 Private Venues
+                    <span class="submenu-arrow" style="float:right;">{{ $privateVenueMenuActive ? '▼' : '▶' }}</span>
+                </div>
+                <div class="submenu {{ $privateVenueMenuActive ? 'expanded' : '' }}">
+                    <a href="{{ route('admin.private-venues.create') }}"
+                       class="submenu-item {{ request()->routeIs('admin.private-venues.create') ? 'active' : '' }}">➕ Add Venue</a>
+                    <a href="{{ route('admin.private-venues.index') }}"
+                       class="submenu-item {{ request()->routeIs('admin.private-venues.index') ? 'active' : '' }}">📋 All Venues</a>
+                </div>
+
+                @php
                     $serviceTypes = [
-                        'private_venue' => ['icon' => '🏰', 'label' => 'Private Venues'],
                         'catering' => ['icon' => '🍴', 'label' => 'Catering'],
                         'train' => ['icon' => '🚂', 'label' => 'Trains'],
                     ];
                 @endphp
-                
                 @foreach($serviceTypes as $serviceType => $config)
                     @php
-                        $isActive = request()->routeIs('admin.services.*') && 
-                                   (request()->get('type') == $serviceType || 
+                        $isActive = request()->routeIs('admin.services.*') &&
+                                   (request()->get('type') == $serviceType ||
                                     (isset($service) && $service->type == $serviceType) ||
                                     (isset($type) && $type == $serviceType));
                     @endphp
-                    <a href="{{ route('admin.services.index', ['type' => $serviceType]) }}" 
+                    <a href="{{ route('admin.services.index', ['type' => $serviceType]) }}"
                        class="menu-item {{ $isActive ? 'active' : '' }}">
                         {{ $config['icon'] }} {{ $config['label'] }}
                     </a>

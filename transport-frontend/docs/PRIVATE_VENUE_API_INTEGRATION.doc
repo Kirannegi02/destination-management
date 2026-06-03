@@ -1,0 +1,474 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>Private Venue API — Frontend Integration Guide</title>
+<style>
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.5; margin: 1in; color: #222; }
+h1 { font-size: 20pt; color: #000e87; border-bottom: 2px solid #162dff; padding-bottom: 6px; }
+h2 { font-size: 14pt; color: #000e87; margin-top: 24px; }
+h3 { font-size: 12pt; color: #333; margin-top: 16px; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
+th { background: #f0f4ff; }
+code, pre { font-family: Consolas, monospace; font-size: 10pt; background: #f5f5f5; }
+pre { padding: 12px; border: 1px solid #ddd; overflow-x: auto; white-space: pre-wrap; }
+.note { background: #fff8e6; border-left: 4px solid #f0ad4e; padding: 10px 14px; margin: 12px 0; }
+ul { margin: 8px 0; }
+li { margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<h1>Private Venue API — Frontend Integration Guide</h1>
+<p><strong>Project:</strong> Destination Management (DMC)<br>
+<strong>Document version:</strong> 1.0 &nbsp;|&nbsp; <strong>Date:</strong> May 2026<br>
+<strong>Audience:</strong> Frontend developers integrating venue browse and booking into a React (or any HTTP) client.</p>
+
+<h2>1. Overview</h2>
+<p>This guide explains how to integrate the <strong>Private Venues</strong> module in your frontend application. The flow matches other DMC modules (guides, restaurants, transport):</p>
+<ol>
+<li>User logs in via OTP and receives a JWT token.</li>
+<li>User browses venues (list + detail).</li>
+<li>User adds one or more venues to a booking cart.</li>
+<li>User submits a single API request with multiple <code>items</code> (multi-venue booking).</li>
+<li>User views and cancels pending bookings from “My bookings”.</li>
+</ol>
+<p>All venue and booking endpoints require authentication (<code>Authorization: Bearer &lt;token&gt;</code>), except OTP auth endpoints.</p>
+
+<h2>2. Environment setup</h2>
+<p>Create a <code>.env</code> file in your frontend project root:</p>
+<pre>VITE_API_URL=http://127.0.0.1:8000</pre>
+<p>All API paths below are relative to this base URL. Example full URL:</p>
+<pre>http://127.0.0.1:8000/api/private-venues</pre>
+
+<h2>3. Authentication (required first)</h2>
+<p>Before calling venue APIs, obtain a JWT token.</p>
+
+<h3>3.1 Send OTP</h3>
+<pre>POST /api/auth/send-otp
+Content-Type: application/json
+
+{
+  "identifier": "user@example.com"
+}</pre>
+<p><code>identifier</code> can be email or phone number registered in the system.</p>
+
+<h3>3.2 Verify OTP</h3>
+<pre>POST /api/auth/verify-otp
+Content-Type: application/json
+
+{
+  "identifier": "user@example.com",
+  "otp": "123456"
+}</pre>
+<p><strong>Success response (example):</strong></p>
+<pre>{
+  "success": true,
+  "data": {
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+    "user": { "id": 1, "name": "Jane Doe", "email": "user@example.com" }
+  }
+}</pre>
+<p>Store the token (e.g. <code>localStorage.setItem('token', data.token)</code>) and send it on every venue request:</p>
+<pre>Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...</pre>
+
+<h2>4. HTTP client setup (Axios example)</h2>
+<p>Recommended pattern used in <code>transport-frontend/src/api/axiosClient.jsx</code>:</p>
+<pre>import axios from 'axios';
+
+const axiosClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000',
+  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+});
+
+axiosClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+axiosClient.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.replace('/login');
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default axiosClient;</pre>
+
+<h2>5. Venue APIs</h2>
+
+<h3>5.1 List all venues</h3>
+<pre>GET /api/private-venues</pre>
+<p><strong>Query parameters (all optional):</strong></p>
+<table>
+<tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+<tr><td>city</td><td>string</td><td>Partial match on city</td></tr>
+<tr><td>country</td><td>string</td><td>Partial match on country</td></tr>
+<tr><td>venue_type</td><td>string</td><td>See venue types in section 8</td></tr>
+<tr><td>event_type</td><td>string</td><td>Filter venues supporting this event type</td></tr>
+<tr><td>min_guests</td><td>integer</td><td>Venues that can host at least this many guests</td></tr>
+<tr><td>max_guests</td><td>integer</td><td>Venues whose minimum size is &lt;= this value</td></tr>
+<tr><td>featured</td><td>boolean</td><td>Only featured venues when true</td></tr>
+<tr><td>search</td><td>string</td><td>Search name, city, or brand chain</td></tr>
+<tr><td>per_page</td><td>integer</td><td>Page size (default 15, max 100)</td></tr>
+</table>
+
+<p><strong>Example request:</strong></p>
+<pre>GET /api/private-venues?city=Paris&amp;min_guests=50&amp;per_page=20</pre>
+
+<p><strong>Example response:</strong></p>
+<pre>{
+  "success": true,
+  "message": "Private venues retrieved successfully.",
+  "data": [
+    {
+      "id": 1,
+      "name": "Grand Conference Hotel",
+      "slug": "grand-conference-hotel",
+      "venue_type": "hotel",
+      "venue_type_label": "Hotel",
+      "city": "Paris",
+      "country": "France",
+      "location_label": "Paris, France",
+      "min_event_size": 10,
+      "max_event_size": 500,
+      "starting_daily_rate": 2500.00,
+      "starting_rate_formatted": "€2,500.00",
+      "currency": "EUR",
+      "image": "https://example.com/storage/venues/1.jpg",
+      "images": ["https://..."],
+      "meeting_rooms_count": 12,
+      "is_featured": true
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "last_page": 3,
+    "per_page": 20,
+    "total": 45
+  }
+}</pre>
+
+<p><strong>Frontend usage:</strong></p>
+<pre>const res = await axiosClient.get('/api/private-venues', {
+  params: { city: 'Paris', min_guests: 50, per_page: 20 }
+});
+const venues = res.data.data;</pre>
+
+<h3>5.2 Get venue by ID</h3>
+<pre>GET /api/private-venues/{id}</pre>
+<p>Returns full venue profile including meeting spaces (rooms), contact info, and pricing notes.</p>
+
+<p><strong>Example response (abbreviated):</strong></p>
+<pre>{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Grand Conference Hotel",
+    "description": "...",
+    "highlights": "...",
+    "phone": "+33...",
+    "email": "events@hotel.com",
+    "website": "https://...",
+    "pricing_notes": "...",
+    "meeting_spaces": [
+      {
+        "id": 5,
+        "name": "Ballroom A",
+        "dimensions_label": "30m × 20m",
+        "max_capacity": 400,
+        "setup_capacities": {
+          "theater": 400,
+          "banquet": 250,
+          "classroom": 180
+        },
+        "amenities": ["av_equipment", "natural_light"]
+      }
+    ]
+  }
+}</pre>
+
+<p><strong>Frontend usage:</strong></p>
+<pre>const res = await axiosClient.get(`/api/private-venues/${venueId}`);
+const venue = res.data.data;</pre>
+
+<h3>5.3 Filter options (for dropdowns)</h3>
+<pre>GET /api/private-venues/filter-options</pre>
+<p>Returns cities, countries, venue types, event types, and setup styles for building filter UI.</p>
+<pre>{
+  "success": true,
+  "data": {
+    "cities": ["Paris", "London"],
+    "countries": ["France", "UK"],
+    "venue_types": { "hotel": "Hotel", "conference_center": "Conference center", ... },
+    "event_types": { "conference": "Conference", "wedding": "Wedding", ... },
+    "setup_styles": { "banquet": "Banquet rounds", "theater": "Theater", ... }
+  }
+}</pre>
+
+<h2>6. Booking APIs</h2>
+
+<h3>6.1 Create booking — single venue</h3>
+<pre>POST /api/private-venue-bookings
+Content-Type: application/json</pre>
+<pre>{
+  "private_venue_id": 1,
+  "private_venue_space_id": 5,
+  "event_date_start": "2026-06-15",
+  "event_date_end": "2026-06-17",
+  "guests": 120,
+  "event_type": "conference",
+  "setup_style": "banquet",
+  "event_name": "Annual Sales Summit",
+  "start_time": "09:00",
+  "end_time": "18:00",
+  "special_requests": "Need stage and breakout rooms",
+  "contact_name": "Jane Doe",
+  "contact_email": "jane@company.com",
+  "contact_phone": "+33123456789"
+}</pre>
+
+<h3>6.2 Create booking — multiple venues (recommended for cart checkout)</h3>
+<p>Send an <code>items</code> array. Each item is one venue booking. Shared contact fields can be at the root level.</p>
+<pre>POST /api/private-venue-bookings
+Content-Type: application/json</pre>
+<pre>{
+  "items": [
+    {
+      "private_venue_id": 1,
+      "private_venue_space_id": 5,
+      "event_date_start": "2026-06-15",
+      "event_date_end": "2026-06-17",
+      "guests": 120,
+      "event_type": "conference",
+      "setup_style": "banquet",
+      "special_requests": "Main plenary room"
+    },
+    {
+      "private_venue_id": 3,
+      "event_date_start": "2026-06-15",
+      "event_date_end": "2026-06-16",
+      "guests": 80,
+      "event_type": "corporate_event",
+      "setup_style": "theater"
+    }
+  ],
+  "contact_name": "Jane Doe",
+  "contact_email": "jane@company.com",
+  "contact_phone": "+33123456789"
+}</pre>
+
+<p><strong>Alternative shorthand</strong> (same dates/guests for all venues):</p>
+<pre>{
+  "private_venue_ids": [1, 3, 7],
+  "event_date_start": "2026-06-15",
+  "event_date_end": "2026-06-17",
+  "guests": 100,
+  "event_type": "conference"
+}</pre>
+
+<p><strong>Batch success response:</strong></p>
+<pre>{
+  "success": true,
+  "message": "2 venue booking(s) submitted successfully.",
+  "data": {
+    "bookings": [ { "id": 10, "venue_name": "...", "status": "pending", ... } ],
+    "count": 2,
+    "combined_estimated_total": 7500.00
+  }
+}</pre>
+
+<p><strong>Validation rules (per item):</strong></p>
+<table>
+<tr><th>Field</th><th>Required</th><th>Rules</th></tr>
+<tr><td>private_venue_id</td><td>Yes</td><td>Must exist and be active</td></tr>
+<tr><td>private_venue_space_id</td><td>No</td><td>Must belong to the selected venue</td></tr>
+<tr><td>event_date_start</td><td>Yes</td><td>Date, today or future</td></tr>
+<tr><td>event_date_end</td><td>No</td><td>Defaults to start date if omitted</td></tr>
+<tr><td>guests</td><td>Yes</td><td>Integer 1–50000; must fit venue min/max size</td></tr>
+<tr><td>event_type</td><td>No</td><td>Must be a valid event type key (section 8)</td></tr>
+<tr><td>setup_style</td><td>No</td><td>Must be a valid setup key (section 8)</td></tr>
+<tr><td>start_time / end_time</td><td>No</td><td>Format HH:mm (24h)</td></tr>
+<tr><td>special_requests</td><td>No</td><td>Free text</td></tr>
+<tr><td>contact_*</td><td>No</td><td>Defaults to logged-in user profile</td></tr>
+</table>
+
+<div class="note">
+<strong>Note:</strong> Users with account status <code>pending</code> receive HTTP 403 and cannot create bookings. Pending bookings can be cancelled; confirmed bookings cannot be cancelled via API.
+</div>
+
+<h3>6.3 List user bookings</h3>
+<pre>GET /api/private-venue-bookings</pre>
+<p><strong>Query parameters:</strong></p>
+<table>
+<tr><th>Parameter</th><th>Description</th></tr>
+<tr><td>status</td><td><code>all</code> (default), <code>pending</code>, <code>confirmed</code>, <code>cancelled</code></td></tr>
+<tr><td>per_page</td><td>Page size (default 15)</td></tr>
+</table>
+
+<p><strong>Example response item:</strong></p>
+<pre>{
+  "id": 10,
+  "private_venue_id": 1,
+  "venue_name": "Grand Conference Hotel",
+  "venue_city": "Paris",
+  "private_venue_space_id": 5,
+  "space_name": "Ballroom A",
+  "event_date_start": "2026-06-15",
+  "event_date_end": "2026-06-17",
+  "guests": 120,
+  "setup_style": "banquet",
+  "setup_style_label": "Banquet rounds",
+  "estimated_total": 7500.00,
+  "currency": "EUR",
+  "status": "pending",
+  "contact_name": "Jane Doe",
+  "created_at": "2026-05-22T10:30:00.000000Z"
+}</pre>
+
+<h3>6.4 Get single booking</h3>
+<pre>GET /api/private-venue-bookings/{id}</pre>
+<p>Returns one booking belonging to the authenticated user.</p>
+
+<h3>6.5 Cancel booking</h3>
+<pre>POST /api/private-venue-bookings/{id}/cancel</pre>
+<p>Cancels a <strong>pending</strong> booking. Already cancelled bookings return success with a message. Confirmed bookings return HTTP 400.</p>
+
+<h2>7. Recommended frontend flow</h2>
+
+<h3>7.1 Suggested routes</h3>
+<table>
+<tr><th>Route</th><th>Purpose</th></tr>
+<tr><td>/login</td><td>OTP authentication</td></tr>
+<tr><td>/private-venues</td><td>Venue listing with filters</td></tr>
+<tr><td>/private-venues/checkout</td><td>Multi-venue cart checkout (define before /:id route)</td></tr>
+<tr><td>/private-venues/:id</td><td>Venue detail page</td></tr>
+<tr><td>/private-venue-bookings</td><td>User’s booking history</td></tr>
+</table>
+
+<h3>7.2 Cart pattern (multi-venue)</h3>
+<ol>
+<li>On list or detail page, user clicks “Add to cart”.</li>
+<li>Store minimal venue objects in <code>localStorage</code> (id, name, city, country).</li>
+<li>On checkout, fetch full venue details for each cart item to populate meeting room dropdowns.</li>
+<li>Build the <code>items</code> array from per-venue form fields.</li>
+<li>POST to <code>/api/private-venue-bookings</code>.</li>
+<li>Clear cart and redirect to bookings list on success.</li>
+</ol>
+
+<p><strong>Example cart helper:</strong></p>
+<pre>const CART_KEY = 'dmc_private_venue_cart';
+
+export function getVenueCart() {
+  return JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+}
+
+export function addVenueToCart(venue) {
+  const cart = getVenueCart();
+  if (!cart.some(v => v.id === venue.id)) {
+    cart.push({ id: venue.id, name: venue.name, city: venue.city, country: venue.country });
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  }
+}</pre>
+
+<p><strong>Example checkout submit:</strong></p>
+<pre>const items = cart.map(v => ({
+  private_venue_id: v.id,
+  event_date_start: forms[v.id].event_date_start,
+  event_date_end: forms[v.id].event_date_end || forms[v.id].event_date_start,
+  guests: Number(forms[v.id].guests),
+  event_type: forms[v.id].event_type || undefined,
+  setup_style: forms[v.id].setup_style || undefined,
+  private_venue_space_id: forms[v.id].spaceId ? Number(forms[v.id].spaceId) : undefined,
+  special_requests: forms[v.id].special_requests || undefined,
+}));
+
+await axiosClient.post('/api/private-venue-bookings', {
+  items,
+  contact_name: contact.name,
+  contact_email: contact.email,
+  contact_phone: contact.phone,
+});</pre>
+
+<h3>7.3 Unified dashboard (optional)</h3>
+<p>All module bookings (including venues) are also available via:</p>
+<pre>GET /api/my-bookings?module=private_venue</pre>
+
+<h2>8. Reference — enum values</h2>
+
+<h3>Venue types (<code>venue_type</code>)</h3>
+<table>
+<tr><th>Key</th><th>Label</th></tr>
+<tr><td>hotel</td><td>Hotel</td></tr>
+<tr><td>conference_center</td><td>Conference center</td></tr>
+<tr><td>convention_center</td><td>Convention center</td></tr>
+<tr><td>restaurant</td><td>Restaurant / private dining</td></tr>
+<tr><td>unique_space</td><td>Unique space</td></tr>
+<tr><td>museum</td><td>Museum / gallery</td></tr>
+<tr><td>outdoor</td><td>Outdoor venue</td></tr>
+<tr><td>other</td><td>Other</td></tr>
+</table>
+
+<h3>Event types (<code>event_type</code>)</h3>
+<p>meeting, conference, corporate_event, incentive, wedding, social, exhibition, training, gala</p>
+
+<h3>Setup styles (<code>setup_style</code>)</h3>
+<p>theater, classroom, banquet, u_shape, conference, reception, hollow_square, cabaret</p>
+
+<h3>Booking status</h3>
+<p>pending → confirmed (by admin) or cancelled (by user while pending)</p>
+
+<h2>9. Error handling</h2>
+<table>
+<tr><th>HTTP code</th><th>Meaning</th><th>Frontend action</th></tr>
+<tr><td>401</td><td>Missing or expired token</td><td>Redirect to login</td></tr>
+<tr><td>403</td><td>Account pending approval</td><td>Show message; disable booking</td></tr>
+<tr><td>404</td><td>Venue or booking not found</td><td>Show not-found UI</td></tr>
+<tr><td>422</td><td>Validation error</td><td>Display <code>errors</code> object or <code>message</code></td></tr>
+<tr><td>400</td><td>Business rule (e.g. cancel confirmed)</td><td>Show <code>message</code> to user</td></tr>
+</table>
+
+<p><strong>422 example:</strong></p>
+<pre>{
+  "success": false,
+  "message": "The items.0.guests field is required.",
+  "errors": {
+    "items.0.guests": ["The items.0.guests field is required."]
+  }
+}</pre>
+
+<h2>10. Reference implementation</h2>
+<p>Working example pages exist in the project:</p>
+<ul>
+<li><code>transport-frontend/src/api/axiosClient.jsx</code> — HTTP client with JWT</li>
+<li><code>transport-frontend/src/pages/PrivateVenuePage.jsx</code> — List + filters + cart</li>
+<li><code>transport-frontend/src/pages/PrivateVenueDetails.jsx</code> — Detail view</li>
+<li><code>transport-frontend/src/pages/PrivateVenueCheckout.jsx</code> — Multi-venue submit</li>
+<li><code>transport-frontend/src/pages/PrivateVenueBookings.jsx</code> — List + cancel</li>
+<li><code>transport-frontend/src/utils/venueCart.js</code> — Cart localStorage helpers</li>
+</ul>
+
+<h2>11. Quick checklist</h2>
+<ul>
+<li>Set <code>VITE_API_URL</code> in frontend <code>.env</code></li>
+<li>Implement OTP login; store JWT token</li>
+<li>Attach <code>Authorization: Bearer</code> header on all venue requests</li>
+<li>Build list page with <code>GET /api/private-venues</code></li>
+<li>Build detail page with <code>GET /api/private-venues/{id}</code></li>
+<li>Implement cart + checkout with <code>POST /api/private-venue-bookings</code> and <code>items[]</code></li>
+<li>Build bookings page with <code>GET /api/private-venue-bookings</code></li>
+<li>Wire cancel with <code>POST /api/private-venue-bookings/{id}/cancel</code></li>
+<li>Handle 401, 403, and 422 responses in UI</li>
+</ul>
+
+<p style="margin-top: 32px; color: #666; font-size: 10pt;">— End of document —</p>
+
+</body>
+</html>

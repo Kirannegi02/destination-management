@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\GuideBooking;
+use App\Models\PrivateVenueBooking;
 use App\Models\SightseeingBooking;
 use App\Models\SouvenirOrder;
 use App\Models\TransportBooking;
@@ -45,7 +46,7 @@ class DashboardController extends Controller
         }
 
         $validated = $request->validate([
-            'module' => 'nullable|in:all,restaurant,guide,sightseeing,transport,souvenir',
+            'module' => 'nullable|in:all,restaurant,guide,sightseeing,transport,souvenir,private_venue',
             'status' => 'nullable|string|max:50',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
@@ -160,6 +161,37 @@ class DashboardController extends Controller
                 });
 
             $items = $items->concat($sightseeingBookings);
+        }
+
+        if ($this->moduleAllowed($module, 'private_venue')) {
+            $venueBookings = PrivateVenueBooking::with(['venue', 'space'])
+                ->where('user_id', $user->id)
+                ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+                ->get()
+                ->map(function (PrivateVenueBooking $b) {
+                    return [
+                        'module' => 'private_venue',
+                        'module_label' => 'Private Venue Booking',
+                        'booking_id' => $b->id,
+                        'title' => $b->venue?->name,
+                        'subtitle' => $b->space?->name ?? $b->event_name,
+                        'booking_date' => $b->event_date_start?->format('Y-m-d'),
+                        'booking_time' => $b->start_time?->format('H:i'),
+                        'status' => $b->status,
+                        'amount' => $b->estimated_total !== null ? (float) $b->estimated_total : null,
+                        'currency' => $b->currency,
+                        'quantity' => $b->guests,
+                        'created_at' => $b->created_at?->toISOString(),
+                        'details' => [
+                            'private_venue_id' => $b->private_venue_id,
+                            'private_venue_space_id' => $b->private_venue_space_id,
+                            'event_date_end' => $b->event_date_end?->format('Y-m-d'),
+                            'event_type' => $b->event_type,
+                        ],
+                    ];
+                });
+
+            $items = $items->concat($venueBookings);
         }
 
         if ($this->moduleAllowed($module, 'transport')) {

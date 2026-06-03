@@ -30,8 +30,18 @@
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Send Requests To Front Controller...
+    # Laravel: API, admin, storage, health check
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_URI} ^/(api|admin|up|storage|clear-cache) [NC]
     RewriteRule ^ index.php [L]
+
+    # React SPA (transport-frontend build copied into public/)
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_dir.c>
+    DirectoryIndex index.html index.php
 </IfModule>

@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\GuideBookingController;
 use App\Http\Controllers\Api\GuideController as ApiGuideController;
+use App\Http\Controllers\Api\PrivateVenueBookingController;
+use App\Http\Controllers\Api\PrivateVenueController;
 use App\Http\Controllers\Api\SightseeingController as ApiSightseeingController;
 use App\Http\Controllers\Api\MealController;
 use Illuminate\Support\Facades\Route;
@@ -110,6 +112,19 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/', [GuideBookingController::class, 'index']);
         Route::post('/', [GuideBookingController::class, 'store']);
         Route::post('/{id}/cancel', [GuideBookingController::class, 'cancel']);
+    });
+
+    Route::prefix('private-venues')->group(function () {
+        Route::get('/filter-options', [PrivateVenueController::class, 'filterOptions']);
+        Route::get('/', [PrivateVenueController::class, 'index']);
+        Route::get('/{id}', [PrivateVenueController::class, 'show'])->whereNumber('id');
+    });
+
+    Route::prefix('private-venue-bookings')->group(function () {
+        Route::get('/', [PrivateVenueBookingController::class, 'index']);
+        Route::post('/', [PrivateVenueBookingController::class, 'store']);
+        Route::get('/{id}', [PrivateVenueBookingController::class, 'show'])->whereNumber('id');
+        Route::post('/{id}/cancel', [PrivateVenueBookingController::class, 'cancel'])->whereNumber('id');
     });
 
     Route::prefix('transport-bookings')->group(function () {

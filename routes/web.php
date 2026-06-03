@@ -144,6 +144,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/sightseeings/{sightseeing}', [\App\Http\Controllers\Admin\SightseeingController::class, 'show'])
             ->whereNumber('sightseeing')
             ->name('sightseeings.show');
+        // Private venues (event spaces — Cvent-style profiles)
+        Route::resource('private-venues', \App\Http\Controllers\Admin\PrivateVenueController::class)
+            ->whereNumber('private_venue');
+
         Route::prefix('sightseeings')->name('sightseeings.')->group(function () {
             Route::get('/export', [\App\Http\Controllers\Admin\SightseeingController::class, 'export'])->name('export');
             Route::get('/export/page', [\App\Http\Controllers\Admin\SightseeingController::class, 'exportPage'])->name('export.page');
